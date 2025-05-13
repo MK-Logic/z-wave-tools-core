@@ -3,7 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 SPDX-FileCopyrightText: 2022-2025 Z-Wave-Alliance <https://z-wavealliance.org/>
 -->
-<zw_classes version="2.16.0">
+<zw_classes version="2.16.1">
   <bas_dev key="0x01" name="BASIC_TYPE_CONTROLLER" help="Controller" comment="Node is a portable controller" />
   <bas_dev key="0x04" name="BASIC_TYPE_ROUTING_END_NODE" help="Routing End Node" comment="Node is an End Node with routing capabilities" />
   <bas_dev key="0x03" name="BASIC_TYPE_END_NODE" help="End Node" comment="Node is an End Node" />
@@ -18964,9 +18964,8 @@ SPDX-FileCopyrightText: 2022-2025 Z-Wave-Alliance <https://z-wavealliance.org/>
         <const key="0x09" flagname="Hand Biometric" flagmask="0x0A" />
         <const key="0x0A" flagname="Unspecified Biometric" flagmask="0x0B" />
       </param>
-      <param key="0x01" name="Source Credential Slot" type="WORD" />
+      <param key="0x01" name="Credential Slot" type="WORD" />
       <param key="0x02" name="Destination User Unique Identifier" type="WORD" />
-      <param key="0x03" name="Destination Credential Slot" type="WORD" />
     </cmd>
     <cmd key="0x13" name="USER_CREDENTIAL_ASSOCIATION_REPORT" help="User Credential Association Report" support_mode="TX">
       <param key="0x00" name="Credential Type" type="CONST">
@@ -18982,18 +18981,15 @@ SPDX-FileCopyrightText: 2022-2025 Z-Wave-Alliance <https://z-wavealliance.org/>
         <const key="0x09" flagname="Hand Biometric" flagmask="0x0A" />
         <const key="0x0A" flagname="Unspecified Biometric" flagmask="0x0B" />
       </param>
-      <param key="0x01" name="Source Credential Slot" type="WORD" />
+      <param key="0x01" name="Credential Slot" type="WORD" />
       <param key="0x02" name="Destination User Unique Identifier" type="WORD" />
-      <param key="0x03" name="Destination Credential Slot" type="WORD" />
       <param key="0x04" name="User Credential Association Status" type="CONST">
         <const key="0x00" flagname="Success" flagmask="0x00" />
         <const key="0x01" flagname="Credential Type Invalid" flagmask="0x01" />
-        <const key="0x02" flagname="Source Credential Slot Invalid" flagmask="0x02" />
-        <const key="0x03" flagname="Source Credential Slot Empty" flagmask="0x03" />
+        <const key="0x02" flagname="Credential Slot Invalid" flagmask="0x02" />
+        <const key="0x03" flagname="Credential Slot Empty" flagmask="0x03" />
         <const key="0x04" flagname="Destination User Unique Identifier Invalid" flagmask="0x04" />
         <const key="0x05" flagname="Destination User Unique Identifier Nonexistent" flagmask="0x05" />
-        <const key="0x06" flagname="Destination Credential Slot Invalid" flagmask="0x06" />
-        <const key="0x07" flagname="Destination Credential Slot Occupied" flagmask="0x07" />
       </param>
     </cmd>
     <cmd key="0x14" name="ALL_USERS_CHECKSUM_GET" help="All Users Checksum Get" support_mode="RX" />

@@ -1161,12 +1161,10 @@ namespace ZWave.CommandClasses
         {
             public const byte ID = 0x12;
             public ByteValue credentialType = 0;
-            public const byte sourceCredentialSlotBytesCount = 2;
-            public byte[] sourceCredentialSlot = new byte[sourceCredentialSlotBytesCount];
+            public const byte credentialSlotBytesCount = 2;
+            public byte[] credentialSlot = new byte[credentialSlotBytesCount];
             public const byte destinationUserUniqueIdentifierBytesCount = 2;
             public byte[] destinationUserUniqueIdentifier = new byte[destinationUserUniqueIdentifierBytesCount];
-            public const byte destinationCredentialSlotBytesCount = 2;
-            public byte[] destinationCredentialSlot = new byte[destinationCredentialSlotBytesCount];
             public static implicit operator USER_CREDENTIAL_ASSOCIATION_SET(byte[] data)
             {
                 USER_CREDENTIAL_ASSOCIATION_SET ret = new USER_CREDENTIAL_ASSOCIATION_SET();
@@ -1174,15 +1172,12 @@ namespace ZWave.CommandClasses
                 {
                     int index = 2;
                     ret.credentialType = data.Length > index ? (ByteValue)data[index++] : ByteValue.Empty;
-                    ret.sourceCredentialSlot = (data.Length - index) >= sourceCredentialSlotBytesCount ? new byte[sourceCredentialSlotBytesCount] : new byte[data.Length - index];
-                    if (data.Length > index) ret.sourceCredentialSlot[0] = data[index++];
-                    if (data.Length > index) ret.sourceCredentialSlot[1] = data[index++];
+                    ret.credentialSlot = (data.Length - index) >= credentialSlotBytesCount ? new byte[credentialSlotBytesCount] : new byte[data.Length - index];
+                    if (data.Length > index) ret.credentialSlot[0] = data[index++];
+                    if (data.Length > index) ret.credentialSlot[1] = data[index++];
                     ret.destinationUserUniqueIdentifier = (data.Length - index) >= destinationUserUniqueIdentifierBytesCount ? new byte[destinationUserUniqueIdentifierBytesCount] : new byte[data.Length - index];
                     if (data.Length > index) ret.destinationUserUniqueIdentifier[0] = data[index++];
                     if (data.Length > index) ret.destinationUserUniqueIdentifier[1] = data[index++];
-                    ret.destinationCredentialSlot = (data.Length - index) >= destinationCredentialSlotBytesCount ? new byte[destinationCredentialSlotBytesCount] : new byte[data.Length - index];
-                    if (data.Length > index) ret.destinationCredentialSlot[0] = data[index++];
-                    if (data.Length > index) ret.destinationCredentialSlot[1] = data[index++];
                 }
                 return ret;
             }
@@ -1192,9 +1187,9 @@ namespace ZWave.CommandClasses
                 ret.Add(COMMAND_CLASS_USER_CREDENTIAL.ID);
                 ret.Add(ID);
                 if (command.credentialType.HasValue) ret.Add(command.credentialType);
-                if (command.sourceCredentialSlot != null)
+                if (command.credentialSlot != null)
                 {
-                    foreach (var tmp in command.sourceCredentialSlot)
+                    foreach (var tmp in command.credentialSlot)
                     {
                         ret.Add(tmp);
                     }
@@ -1202,13 +1197,6 @@ namespace ZWave.CommandClasses
                 if (command.destinationUserUniqueIdentifier != null)
                 {
                     foreach (var tmp in command.destinationUserUniqueIdentifier)
-                    {
-                        ret.Add(tmp);
-                    }
-                }
-                if (command.destinationCredentialSlot != null)
-                {
-                    foreach (var tmp in command.destinationCredentialSlot)
                     {
                         ret.Add(tmp);
                     }
@@ -1220,12 +1208,10 @@ namespace ZWave.CommandClasses
         {
             public const byte ID = 0x13;
             public ByteValue credentialType = 0;
-            public const byte sourceCredentialSlotBytesCount = 2;
-            public byte[] sourceCredentialSlot = new byte[sourceCredentialSlotBytesCount];
+            public const byte credentialSlotBytesCount = 2;
+            public byte[] credentialSlot = new byte[credentialSlotBytesCount];
             public const byte destinationUserUniqueIdentifierBytesCount = 2;
             public byte[] destinationUserUniqueIdentifier = new byte[destinationUserUniqueIdentifierBytesCount];
-            public const byte destinationCredentialSlotBytesCount = 2;
-            public byte[] destinationCredentialSlot = new byte[destinationCredentialSlotBytesCount];
             public ByteValue userCredentialAssociationStatus = 0;
             public static implicit operator USER_CREDENTIAL_ASSOCIATION_REPORT(byte[] data)
             {
@@ -1234,15 +1220,12 @@ namespace ZWave.CommandClasses
                 {
                     int index = 2;
                     ret.credentialType = data.Length > index ? (ByteValue)data[index++] : ByteValue.Empty;
-                    ret.sourceCredentialSlot = (data.Length - index) >= sourceCredentialSlotBytesCount ? new byte[sourceCredentialSlotBytesCount] : new byte[data.Length - index];
-                    if (data.Length > index) ret.sourceCredentialSlot[0] = data[index++];
-                    if (data.Length > index) ret.sourceCredentialSlot[1] = data[index++];
+                    ret.credentialSlot = (data.Length - index) >= credentialSlotBytesCount ? new byte[credentialSlotBytesCount] : new byte[data.Length - index];
+                    if (data.Length > index) ret.credentialSlot[0] = data[index++];
+                    if (data.Length > index) ret.credentialSlot[1] = data[index++];
                     ret.destinationUserUniqueIdentifier = (data.Length - index) >= destinationUserUniqueIdentifierBytesCount ? new byte[destinationUserUniqueIdentifierBytesCount] : new byte[data.Length - index];
                     if (data.Length > index) ret.destinationUserUniqueIdentifier[0] = data[index++];
                     if (data.Length > index) ret.destinationUserUniqueIdentifier[1] = data[index++];
-                    ret.destinationCredentialSlot = (data.Length - index) >= destinationCredentialSlotBytesCount ? new byte[destinationCredentialSlotBytesCount] : new byte[data.Length - index];
-                    if (data.Length > index) ret.destinationCredentialSlot[0] = data[index++];
-                    if (data.Length > index) ret.destinationCredentialSlot[1] = data[index++];
                     ret.userCredentialAssociationStatus = data.Length > index ? (ByteValue)data[index++] : ByteValue.Empty;
                 }
                 return ret;
@@ -1253,9 +1236,9 @@ namespace ZWave.CommandClasses
                 ret.Add(COMMAND_CLASS_USER_CREDENTIAL.ID);
                 ret.Add(ID);
                 if (command.credentialType.HasValue) ret.Add(command.credentialType);
-                if (command.sourceCredentialSlot != null)
+                if (command.credentialSlot != null)
                 {
-                    foreach (var tmp in command.sourceCredentialSlot)
+                    foreach (var tmp in command.credentialSlot)
                     {
                         ret.Add(tmp);
                     }
@@ -1263,13 +1246,6 @@ namespace ZWave.CommandClasses
                 if (command.destinationUserUniqueIdentifier != null)
                 {
                     foreach (var tmp in command.destinationUserUniqueIdentifier)
-                    {
-                        ret.Add(tmp);
-                    }
-                }
-                if (command.destinationCredentialSlot != null)
-                {
-                    foreach (var tmp in command.destinationCredentialSlot)
                     {
                         ret.Add(tmp);
                     }
