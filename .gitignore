@@ -1,32 +1,54 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# SPDX-FileCopyrightText: Z-Wave Alliance, Inc. – https://z-wavealliance.org
 
-#Ignore thumbnails created by Windows
-Thumbs.db
-#Ignore files built by Visual Studio
-*.obj
-*.exe
-*.pdb
-*.user
-*.aps
-*.pch
-*.vspscc
+# Jekyll
+_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+
+# Mac OS
+.DS_Store
+
+# Nuget packages folder
+packages/
+
+# PyCharm
+*.idea
+
+# Python
+__pycache__
+
+# Visual Studio
+.vs/
+_ReSharper*/
+[Bb]in
+[Dd]ebug*/
+[Oo]bj/
+[Rr]elease*/
+[Tt]est[Rr]esult*
 *_i.c
 *_p.c
+*.aps
+*.bak
+*.cache
+*.exe
+*.ilk
+*.log
+*.lib
 *.ncb
+*.[Oo]bj
+*.pch
+*.pdb
+*.sbr
 *.suo
 *.tlb
 *.tlh
-*.bak
-*.cache
-*.ilk
-*.log
-[Bb]in
-[Dd]ebug*/
-*.lib
-*.sbr
-obj/
-[Rr]elease*/
-_ReSharper*/
-[Tt]est[Rr]esult*
-.vs/
-#Nuget packages folder
-packages/
+*.user
+*.vspscc
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
