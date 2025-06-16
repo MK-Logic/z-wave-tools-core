@@ -1584,7 +1584,7 @@ namespace Utils
         }
 
         /// <summary>
-        /// OEM Extended ASCII in the Z-Wave specification is Code page (CCSID) 437, also known as 'OEM-US' for the IBM PC. 
+        /// OEM Extended ASCII in the Z-Wave specification is Code Page (CCSID) 437, also known as 'OEM-US' for the IBM PC. 
         /// </summary>
         public static string GetStringFromOemExtendedAsciiBytes(byte[] oemExtAsciiBytes)
         {
@@ -1614,7 +1614,7 @@ namespace Utils
         }
 
         /// <summary>
-        /// OEM Extended ASCII in the Z-Wave specification is Code page (CCSID) 437, also known as 'OEM-US' for the IBM PC. 
+        /// OEM Extended ASCII in the Z-Wave specification is Code Page (CCSID) 437, also known as 'OEM-US' for the IBM PC. 
         /// If the given minimum length is greater than the encoded given string, spaces will be added.
         /// Byte array will be shortened to the maximum length given.
         /// </summary>
@@ -1657,7 +1657,7 @@ namespace Utils
                     bytes = System.Text.Encoding.ASCII.GetBytes(s);
                     break;
                 case EncodingType.OemExtendedAscii:
-                    // OEM Extended ASCII in the Z-Wave specification is Code page (CCSID) 437, also known as 'OEM-US' for the IBM PC.
+                    // OEM Extended ASCII in the Z-Wave specification is Code Page (CCSID) 437, also known as 'OEM-US' for the IBM PC.
                     bytes = System.Text.Encoding.GetEncoding(437).GetBytes(s);
                     break;
                 case EncodingType.Utf16BigEndian:
