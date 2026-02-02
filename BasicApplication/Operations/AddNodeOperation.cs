@@ -254,6 +254,7 @@ namespace ZWave.BasicApplication.Operations
         public byte Specific { get; set; }
         public byte[] CommandClasses { get; set; }
         public bool IsEndDevice { get; set; }
+        public bool nlsSupport { get; set; }
         public SubstituteStatuses SubstituteStatus { get; set; }
         public BootstrapingStatuses BootstrapingStatuses { get; set; }
         public byte RoleType { get; set; }

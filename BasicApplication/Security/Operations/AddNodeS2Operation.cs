@@ -29,7 +29,8 @@ namespace ZWave.BasicApplication.Operations
             _securityTestSettingsService = new SecurityTestSettingsService(_securityManagerInfo, true);
         }
 
-        COMMAND_CLASS_SECURITY_2.KEX_REPORT KEX_REPORT = null;
+        COMMAND_CLASS_SECURITY_2_V2.KEX_REPORT KEX_REPORT = null;
+        COMMAND_CLASS_SECURITY_2_V2.NLS_STATE_REPORT NLS_STATE_REPORT = null;
 
         private bool _isClientSideAuthRequested = false;
         private bool _isClientSideAuthGranted = false;
@@ -46,6 +47,8 @@ namespace ZWave.BasicApplication.Operations
         SendDataOperation _TransferEnd;
         ExpectDataOperation _OnNKGet;
         ExpectDataOperation _OnTransferEnd; // Receive and load real key.
+        SendDataOperation _NlsStateSet;
+        RequestDataOperation _NlsStateGetNlsStateReport;
         SendDataOperation _KexFail;
         SendDataOperation _KexFailCancel;
         ResponseDataOperation _KexFailReceived;
@@ -65,6 +68,8 @@ namespace ZWave.BasicApplication.Operations
             ActionUnits.Add(new ActionCompletedUnit(_NKReportNKVerify, (Action<ActionCompletedUnit>)OnNKVerify, _OnNKGet, _OnTransferEnd, _TransferEnd));
             ActionUnits.Add(new ActionCompletedUnit(_OnNKGet, OnNKGetNextKey));
             ActionUnits.Add(new ActionCompletedUnit(_OnTransferEnd, OnTransferEnd));
+            ActionUnits.Add(new ActionCompletedUnit(_NlsStateSet, OnNlsStateSet));
+            ActionUnits.Add(new ActionCompletedUnit(_NlsStateGetNlsStateReport, OnNlsStateReport));
             ActionUnits.Add(new ActionCompletedUnit(_KexFail, OnKexFail));
             ActionUnits.Add(new ActionCompletedUnit(_KexFailReceived, OnKexFailReceived));
             ActionUnits.Add(new ActionCompletedUnit(_SecurityMessageReceived, OnSecurityMessageReceived));
@@ -132,6 +137,18 @@ namespace ZWave.BasicApplication.Operations
             _OnTransferEnd.Name = "ExpectData TRANSFER_END";
             _OnTransferEnd.IgnoreRxStatuses = ReceiveStatuses.TypeMulti | ReceiveStatuses.TypeBroad;
 
+            _NlsStateSet = new SendDataOperation(_network, NodeTag.Empty, null, _securityManagerInfo.TxOptions);
+            _NlsStateSet.Name = "SendData NLS_STATE_SET";
+            _NlsStateSet.SubstituteSettings.SetFlag(SubstituteFlags.UseSecurity);
+
+            _NlsStateGetNlsStateReport = new RequestDataOperation(_network, NodeTag.Empty, NodeTag.Empty,
+                null, _securityManagerInfo.TxOptions,
+                new COMMAND_CLASS_SECURITY_2_V2.NLS_STATE_REPORT(), 2, 1000); // TODO: find better timeout define
+
+            _NlsStateGetNlsStateReport.Name = "RequestData NLS_STATE_GET/NLS_STATE_REPORT";
+            _NlsStateGetNlsStateReport.SubstituteSettings.SetFlag(SubstituteFlags.UseSecurity);
+            _NlsStateGetNlsStateReport.IgnoreRxStatuses = ReceiveStatuses.TypeMulti | ReceiveStatuses.TypeBroad;
+
             _KexFail = new SendDataOperation(_network, NodeTag.Empty, null, _securityManagerInfo.TxOptions);
             _KexFail.Name = "SendData KEX_FAIL";
             _KexFail.SubstituteSettings.SetFlag(SubstituteFlags.DenySecurity);
@@ -141,6 +158,29 @@ namespace ZWave.BasicApplication.Operations
             _KexFailCancel.SubstituteSettings.SetFlag(SubstituteFlags.DenySecurity);
             _KexFailCancel.Data = new COMMAND_CLASS_SECURITY_2.KEX_FAIL() { kexFailType = 0x06 };
         }
+
+        private void OnNlsStateReport(ActionCompletedUnit unit)
+        {
+            if (_NlsStateGetNlsStateReport.Result)
+            {
+                NLS_STATE_REPORT = _NlsStateGetNlsStateReport.SpecificResult.Command;
+                if (NLS_STATE_REPORT.properties1.nlsState == 1)
+                {
+                    _securityManagerInfo.Network.SetNlsState(SpecificResult.Node, true);
+                }
+            }
+            _securityManagerInfo.IsInclusion = false;
+            SetStateCompleted(unit);
+        }
+
+        private void OnNlsStateSet(ActionCompletedUnit unit)
+        {
+            var cmd = new COMMAND_CLASS_SECURITY_2_V2.NLS_STATE_GET();
+            _NlsStateGetNlsStateReport.DstNode = new NodeTag(SpecificResult.Id);
+            _NlsStateGetNlsStateReport.Data = cmd;
+            unit.SetNextActionItems(_NlsStateGetNlsStateReport);
+        }
+
 
         protected void SetStateCompletedSecurityFailed(IActionUnit ou)
         {
@@ -161,13 +201,28 @@ namespace ZWave.BasicApplication.Operations
                 _securityManagerInfo.Network.SetSecuritySchemes(SpecificResult.Id, _transferedSchemes.ToArray());
                 _securityManagerInfo.Network.SetSecuritySchemesSpecified(SpecificResult.Node);
                 _securityManagerInfo.ActivateNetworkKeyS2ForNode(_peerNodeId, _securityManagerInfo.Network.GetCurrentOrSwitchToHighestSecurityScheme(SpecificResult.Node), _network.IsLongRangeEnabled(SpecificResult.Node));
+
+                if (SpecificResult.nlsSupport)
+                {
+                    var cmd = new COMMAND_CLASS_SECURITY_2_V2.NLS_STATE_SET();
+                    cmd.nlsState = 1;
+                    _NlsStateSet.DstNode = new NodeTag(SpecificResult.Id);
+                    _NlsStateSet.Data = cmd;
+
+                    ((ActionCompletedUnit)ou).SetNextActionItems(_NlsStateSet);
+                }
+                else
+                {
+                    _securityManagerInfo.IsInclusion = false;
+                    SetStateCompleted(ou);
+                }
             }
             else
             {
                 SpecificResult.SecuritySchemes = _securityManagerInfo.Network.GetSecuritySchemes(SpecificResult.Id);
+                _securityManagerInfo.IsInclusion = false;
+                SetStateCompleted(ou);
             }
-            _securityManagerInfo.IsInclusion = false;
-            SetStateCompleted(ou);
         }
 
         protected void SetStateCompletedSecurityNone(IActionUnit ou)
@@ -384,6 +439,7 @@ namespace ZWave.BasicApplication.Operations
                             }
                         }
 
+                        SpecificResult.nlsSupport = KEX_REPORT.properties1.nlsSupport > 0;
                         _KEXSetPKReport.DstNode = new NodeTag(SpecificResult.Id);
                         _isClientSideAuthRequested = KEX_REPORT.properties1.requestCsa > 0;
                         _isClientSideAuthGranted = _isClientSideAuthRequested;

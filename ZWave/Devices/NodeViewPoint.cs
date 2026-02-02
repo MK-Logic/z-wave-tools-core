@@ -105,6 +105,7 @@ namespace ZWave.Devices
         private int SecuritySchemeIndex { get; set; }
         private byte[] SecureCommandClasses { get; set; }
         public bool IsZipGateway { get; internal set; }
+        public bool NlsState { get; set; }
 
         public NodeViewPoint()
         {
@@ -127,6 +128,7 @@ namespace ZWave.Devices
             RoleType = RoleTypes.None;
             NodeType = NodeTypes.None;
             IsZipGateway = false;
+            NlsState = false;
         }
 
         public bool IsFlirs
