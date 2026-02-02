@@ -408,6 +408,26 @@ namespace ZWave.Devices
             Nodes[node].ResetSecuritySchemes();
         }
 
+        public void SetNlsState(NodeTag node, bool value)
+        {
+            SetNlsState(node.Id, value);
+        }
+
+        public void SetNlsState(ushort nodeId, bool value)
+        {
+            Nodes[nodeId].NlsState = value;
+        }
+
+        public bool GetNlsState(NodeTag node)
+        {
+            return GetNlsState(node.Id);
+        }
+
+        public bool GetNlsState(ushort nodeId)
+        {
+            return Nodes[nodeId].NlsState;
+        }
+
         public void SetCommandClasses(byte[] cmdClasses)
         {
             SetCommandClasses(NodeTag, cmdClasses);
