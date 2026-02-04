@@ -1,5 +1,6 @@
 /// SPDX-License-Identifier: BSD-3-Clause
 /// SPDX-FileCopyrightText: Silicon Laboratories Inc. https://www.silabs.com
+/// SPDX-FileCopyrightText: Z-Wave Alliance https://z-wavealliance.org
 namespace ZWave.BasicApplication.Enums
 {
     /// <summary>
@@ -86,6 +87,24 @@ namespace ZWave.BasicApplication.Enums
         /// Command to transmit the data buffer to a list of Z-Wave Nodes (multicast frame).
         /// </summary>
         CmdZWaveSendDataMulti_Bridge = 0xAB,
+        /// <summary>
+        /// Request from module: Host shall encrypt the given protocol payload and send it via 'Controller Node Send Protocol Data' command.
+        /// Used for Network Layer Security (NLS); host performs S2 encryption and returns encrypted frame to module.
+        /// </summary>
+        CmdZWaveRequestProtocolCcEncryption = 0x6C,
+        /// <summary>
+        /// Command to transmit encrypted protocol (Network Layer) data to a Z-Wave Node.
+        /// Used for Network Layer Security (NLS); host sends encrypted frame to module for RF transmission.
+        /// It must only be used on reception of 'Request Protocol Command Class Encryption' command.
+        /// This command MUST only be supported by controller Z-Wave library types.
+        /// </summary>
+        CmdZWaveControllerNodeSendProtocolData = 0xAC,
+        /// <summary>
+        /// Command to transfer a decrypted protocol (Network Layer) command from host to module.
+        /// Used when host has decrypted an incoming NLS frame and inner command class is a Network Layer CC
+        /// (Z-Wave Protocol CC 0x01 / Z-Wave Long Range CC 0x04).
+        /// </summary>
+        CmdZWaveTransferProtocolCc = 0x69,
         /// <summary>
         /// Command to get the Z-Wave basis API library version.
         /// </summary>

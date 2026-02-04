@@ -1,5 +1,6 @@
 /// SPDX-License-Identifier: BSD-3-Clause
 /// SPDX-FileCopyrightText: Silicon Laboratories Inc. https://www.silabs.com
+/// SPDX-FileCopyrightText: Z-Wave Alliance https://z-wavealliance.org
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -253,6 +254,16 @@ namespace ZWave.BasicApplication
                                                     _isPrevDecryptFailed[srcNode] = false;
                                                 }
                                                 ApplyS2MessageExtensionsOnSuccess(srcNode, cmdData, ref additionalAction);
+                                                // NLS: When decrypted inner command is a Network Layer CC,
+                                                // transfer to module via 'Transfer Protocol CC' command (0x69)
+                                                if (data != null && data.Length >= 1 && (data[0] == 0x01 /*ZW Protocol CC*/ || data[0] == 0x04 /*ZWLR CC*/))
+                                                {
+                                                    var transferOp = new TransferProtocolCcOperation(_network, srcNode, 0, data);
+                                                    if (additionalAction != null)
+                                                        additionalAction = new ActionSerialGroup(transferOp, additionalAction);
+                                                    else
+                                                        additionalAction = transferOp;
+                                                }
                                                 bool hasMpanExtension = false;
                                                 if (extensions != null && extensions.EncryptedExtensionsList != null && extensions.EncryptedExtensionsList.Count > 0)
                                                 {
@@ -802,6 +813,64 @@ namespace ZWave.BasicApplication
             Action<ActionToken, bool> inclusionControllerStatusUpdateCallback)
         {
             return new InclusionControllerSecureSupport(_network, SecurityManagerInfo, updateCallback, inclusionControllerStatusUpdateCallback);
+        }
+
+        /// <summary>
+        /// Creates the NLS (Network Layer Security) listener for Request Protocol CC Encryption (0x6C).
+        /// Pass the returned operation to AddSubstituteManager(securityManager, nlsOperation) so the listener is started.
+        /// </summary>
+        /// <param name="executeAsync">Callback to run follow-up operations (e.g. SessionClient.ExecuteAsync).</param>
+        public RequestProtocolCcEncryptionOperation CreateRequestProtocolCcEncryptionOperation(Action<ActionBase> executeAsync)
+        {
+            var op = new RequestProtocolCcEncryptionOperation { NetworkView = SecurityManagerInfo.Network };
+            op.ReceivedCallback = data => HandleProtocolCcEncryptionRequest(data, executeAsync);
+            return op;
+        }
+
+        /// <summary>
+        /// Handles a 'Request Protocol CC Encryption' command (0x6C) from the module:
+        /// 1. Encrypts payload with S2,
+        /// 2. sends via 'Controller Node Send Protocol Data' command (0xAC),
+        /// 3. reports TX via 'Request Protocol CC Encryption' command (0x6C) callback.
+        /// </summary>
+        private void HandleProtocolCcEncryptionRequest(RequestProtocolCcEncryptionData data, Action<ActionBase> executeAsync)
+        {
+            if (!IsActive || executeAsync == null)
+            {
+                return;
+            }
+            NodeTag srcNode = SecurityManagerInfo.Network.NodeTag;
+            NodeTag dstNode = data.DestinationNodeId;
+            var peerNodeId = new InvariantPeerNodeId(srcNode, dstNode);
+            if (!SecurityManagerInfo.ScKeys.ContainsKey(peerNodeId))
+            {
+                var scheme = SecurityManagerInfo.Network.GetCurrentOrSwitchToHighestSecurityScheme(dstNode);
+                if (scheme == SecuritySchemes.NONE)
+                {
+                    return;
+                }
+                SecurityManagerInfo.ActivateNetworkKeyS2ForNode(peerNodeId, scheme, _network.IsLongRange(dstNode) && _network.IsLongRangeEnabled(dstNode));
+            }
+            if (!SecurityManagerInfo.ScKeys.TryGetValue(peerNodeId, out SinglecastKey sckey))
+            {
+                return;
+            }
+            byte[] encryptedMsg = _securityS2CryptoProvider.EncryptSinglecastCommand(
+                sckey, SecurityManagerInfo.SpanTable, srcNode, dstNode, SecurityManagerInfo.Network.HomeId, data.Payload, null, new SubstituteSettings());
+            if (encryptedMsg == null)
+            {
+                return;
+            }
+            var sendOp = new ControllerNodeSendProtocolDataOperation(_network, dstNode, encryptedMsg, data.ProtocolMetadata, data.SessionId);
+            sendOp.CompletedCallback = completed =>
+            {
+                var sendResult = (completed as ControllerNodeSendProtocolDataOperation)?.SpecificResult;
+                if (sendResult != null)
+                {
+                    executeAsync(new RequestProtocolCcEncryptionCallbackOperation(data.SessionId, (byte)sendResult.TransmitStatus, sendResult));
+                }
+            };
+            executeAsync(sendOp);
         }
 
         public override ActionBase SubstituteActionInternal(ApiOperation apiAction)
