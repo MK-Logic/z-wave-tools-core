@@ -94,6 +94,10 @@
     <Compile Include="Operations\GetLRChannelOperation.cs" />
     <Compile Include="Operations\InitiateShutdownOperation.cs" />
     <Compile Include="Operations\RequestNodeNeighborDiscoveryOperation.cs" />
+    <Compile Include="Operations\RequestProtocolCcEncryptionOperation.cs" />
+    <Compile Include="Operations\RequestProtocolCcEncryptionCallbackOperation.cs" />
+    <Compile Include="Operations\ControllerNodeSendProtocolDataOperation.cs" />
+    <Compile Include="Operations\TransferProtocolCcOperation.cs" />
     <Compile Include="Operations\SerialApiGetLRNodesOperation.cs" />
     <Compile Include="Operations\GetMaxLrTxPowerOperation.cs" />
     <Compile Include="Operations\EnableRadioPTIOperation .cs" />
