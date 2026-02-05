@@ -259,7 +259,14 @@ namespace ZWave.BasicApplication
                                                 // transfer to module via 'Transfer Protocol CC' command (0x69)
                                                 if (data != null && data.Length >= 1 && (data[0] == 0x01 /*ZW Protocol CC*/ || data[0] == 0x04 /*ZWLR CC*/))
                                                 {
-                                                    var transferOp = new TransferProtocolCcOperation(_network, srcNode, 0, data);
+                                                    var nlsPeerNodeId = new InvariantPeerNodeId(destNode, srcNode);
+                                                    byte decryptionKey = 0;
+                                                    if (SecurityManagerInfo.ScKeys.TryGetValue(nlsPeerNodeId, out var nlsSckey))
+                                                    {
+                                                        var scheme = nlsSckey.SecurityScheme;
+                                                        decryptionKey = scheme == SecuritySchemes.S2_TEMP ? (byte)SecuritySchemes.NONE : (byte)scheme;
+                                                    }
+                                                    var transferOp = new TransferProtocolCcOperation(_network, srcNode, decryptionKey, data);
                                                     if (additionalAction != null)
                                                         additionalAction = new ActionSerialGroup(transferOp, additionalAction);
                                                     else
