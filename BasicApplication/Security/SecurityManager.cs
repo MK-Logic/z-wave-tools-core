@@ -31,6 +31,7 @@ namespace ZWave.BasicApplication
         #region Security Fields
 
         private byte _fragmentSequenceCounter = 1;
+        private static byte _nlsSupervisionSessionId;
 
         #endregion
 
@@ -855,8 +856,24 @@ namespace ZWave.BasicApplication
             {
                 return;
             }
+            byte[] payloadToEncrypt = data.Payload;
+            if ((data.UseSupervision & 0x80) != 0)
+            {
+                if (++_nlsSupervisionSessionId == 0 || _nlsSupervisionSessionId > 0x3F)
+                {
+                    _nlsSupervisionSessionId = 1;
+                }
+                    
+                var supervisionGet = new COMMAND_CLASS_SUPERVISION.SUPERVISION_GET
+                {
+                    properties1 = new COMMAND_CLASS_SUPERVISION.SUPERVISION_GET.Tproperties1() { sessionId = _nlsSupervisionSessionId },
+                    encapsulatedCommandLength = (byte)data.Payload.Length,
+                    encapsulatedCommand = new List<byte>(data.Payload)
+                };
+                payloadToEncrypt = supervisionGet;
+            }
             byte[] encryptedMsg = _securityS2CryptoProvider.EncryptSinglecastCommand(
-                sckey, SecurityManagerInfo.SpanTable, srcNode, dstNode, SecurityManagerInfo.Network.HomeId, data.Payload, null, new SubstituteSettings());
+                sckey, SecurityManagerInfo.SpanTable, srcNode, dstNode, SecurityManagerInfo.Network.HomeId, payloadToEncrypt, null, new SubstituteSettings());
             if (encryptedMsg == null)
             {
                 return;
