@@ -606,6 +606,7 @@ namespace ZWave.BasicApplication.Devices
                                 {
                                     ((Controller)this).IncludedNodes = res.IncludedNodes;
                                 }
+                                SyncNlsStateFromModule();
                             }
                             completedCallback?.Invoke(action);
                         }
@@ -757,6 +758,7 @@ namespace ZWave.BasicApplication.Devices
                     {
                         ((Controller)this).IncludedNodes = res.IncludedNodes;
                     }
+                    SyncNlsStateFromModule();
                 }
             }
             else if (actionItem is SerialApiGetLRNodesOperation)
@@ -1297,6 +1299,26 @@ namespace ZWave.BasicApplication.Devices
         public ActionToken SerialApiGetLRNodes(Action<IActionItem> completedCallback)
         {
             return ExecuteAsync(new SerialApiGetLRNodesOperation(Network), completedCallback);
+        }
+
+        /// <summary>
+        /// Syncs host view of NLS state from controller module NVM (e.g. after startup / GetInitData).
+        /// </summary>
+        private void SyncNlsStateFromModule()
+        {
+            if (Network == null)
+            {
+                return;
+            }
+            var nlsResult = SerialApiGetNlsNodes();
+            if (!nlsResult || nlsResult.IncludedNodes == null)
+            {
+                return;
+            }
+            foreach (var node in nlsResult.IncludedNodes)
+            {
+                Network.SetNlsState(node, true);
+            }
         }
 
         public SerialApiGetNlsNodesResult SerialApiGetNlsNodes()
