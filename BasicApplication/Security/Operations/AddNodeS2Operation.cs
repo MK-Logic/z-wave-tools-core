@@ -49,6 +49,7 @@ namespace ZWave.BasicApplication.Operations
         ExpectDataOperation _OnTransferEnd; // Receive and load real key.
         SendDataOperation _NlsStateSet;
         RequestDataOperation _NlsStateGetNlsStateReport;
+        EnableNodeNlsOperation _EnableNodeNls;
         SendDataOperation _KexFail;
         SendDataOperation _KexFailCancel;
         ResponseDataOperation _KexFailReceived;
@@ -70,6 +71,7 @@ namespace ZWave.BasicApplication.Operations
             ActionUnits.Add(new ActionCompletedUnit(_OnTransferEnd, OnTransferEnd));
             ActionUnits.Add(new ActionCompletedUnit(_NlsStateSet, OnNlsStateSet));
             ActionUnits.Add(new ActionCompletedUnit(_NlsStateGetNlsStateReport, OnNlsStateReport));
+            ActionUnits.Add(new ActionCompletedUnit(_EnableNodeNls, OnEnableNodeNlsCompleted));
             ActionUnits.Add(new ActionCompletedUnit(_KexFail, OnKexFail));
             ActionUnits.Add(new ActionCompletedUnit(_KexFailReceived, OnKexFailReceived));
             ActionUnits.Add(new ActionCompletedUnit(_SecurityMessageReceived, OnSecurityMessageReceived));
@@ -149,6 +151,9 @@ namespace ZWave.BasicApplication.Operations
             _NlsStateGetNlsStateReport.SubstituteSettings.SetFlag(SubstituteFlags.UseSecurity);
             _NlsStateGetNlsStateReport.IgnoreRxStatuses = ReceiveStatuses.TypeMulti | ReceiveStatuses.TypeBroad;
 
+            _EnableNodeNls = new EnableNodeNlsOperation(_network, NodeTag.Empty);
+            _EnableNodeNls.Name = "Enable Node NLS (0x6A)";
+
             _KexFail = new SendDataOperation(_network, NodeTag.Empty, null, _securityManagerInfo.TxOptions);
             _KexFail.Name = "SendData KEX_FAIL";
             _KexFail.SubstituteSettings.SetFlag(SubstituteFlags.DenySecurity);
@@ -167,8 +172,16 @@ namespace ZWave.BasicApplication.Operations
                 if (NLS_STATE_REPORT.properties1.nlsState == 1)
                 {
                     _securityManagerInfo.Network.SetNlsState(SpecificResult.Node, true);
+                    _EnableNodeNls.NodeId = SpecificResult.Node;
+                    unit.SetNextActionItems(_EnableNodeNls);
                 }
             }
+            _securityManagerInfo.IsInclusion = false;
+            SetStateCompleted(unit);
+        }
+
+        private void OnEnableNodeNlsCompleted(ActionCompletedUnit unit)
+        {
             _securityManagerInfo.IsInclusion = false;
             SetStateCompleted(unit);
         }
