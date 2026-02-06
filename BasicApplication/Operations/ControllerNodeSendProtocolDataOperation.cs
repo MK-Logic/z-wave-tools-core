@@ -53,7 +53,9 @@ namespace ZWave.BasicApplication.Operations
                 Buffer.BlockCopy(Data, 0, ret, 3, Data.Length);
                 ret[3 + Data.Length] = (byte)metaLen;
                 if (metaLen > 0)
+                {
                     Buffer.BlockCopy(ProtocolMetadata, 0, ret, 4 + Data.Length, metaLen);
+                }
                 ret[4 + Data.Length + metaLen] = SessionId;
             }
             else
@@ -64,7 +66,9 @@ namespace ZWave.BasicApplication.Operations
                 Buffer.BlockCopy(Data, 0, ret, 2, Data.Length);
                 ret[2 + Data.Length] = (byte)metaLen;
                 if (metaLen > 0)
+                {
                     Buffer.BlockCopy(ProtocolMetadata, 0, ret, 3 + Data.Length, metaLen);
+                }
                 ret[3 + Data.Length + metaLen] = SessionId;
             }
             return ret;
@@ -74,7 +78,9 @@ namespace ZWave.BasicApplication.Operations
         {
             var payload = ou.DataFrame.Payload;
             if (payload != null && payload.Length > 1)
+            {
                 SpecificResult.FillFromTxReportPayload(payload);
+            }
         }
 
         public override string AboutMe()

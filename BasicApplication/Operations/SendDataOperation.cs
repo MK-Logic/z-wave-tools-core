@@ -52,7 +52,9 @@ namespace ZWave.BasicApplication.Operations
         protected override byte[] CreateInputParameters()
         {
             if (Data == null)
+            {
                 Data = new byte[0];
+            }
             byte[] ret = new byte[3 + Data.Length];
             ret[0] = (byte)DstNode.Id;
             ret[1] = (byte)Data.Length;
@@ -88,7 +90,9 @@ namespace ZWave.BasicApplication.Operations
         {
             var payload = ou.DataFrame.Payload;
             if (payload != null && payload.Length > 1)
+            {
                 SpecificResult.FillFromTxReportPayload(payload);
+            }
         }
 
         public override string AboutMe()
@@ -148,61 +152,97 @@ namespace ZWave.BasicApplication.Operations
         public void FillFromTxReportPayload(byte[] payload)
         {
             if (payload == null || payload.Length < 2)
+            {
                 return;
+            }
             FuncId = payload[0];
             TransmitStatus = (TransmitStatuses)payload[1];
             if (payload.Length <= 3)
+            {
                 return;
+            }
             HasTxTransmitReport = true;
             TransmitTicks = (ushort)((payload[2] << 8) | payload[3]);
             if (payload.Length <= 4)
+            {
                 return;
+            }
             RepeatersCount = payload[4];
             if (payload.Length <= 5)
+            {
                 return;
+            }
             AckRssi = (sbyte)payload[5];
             if (payload.Length <= 9)
+            {
                 return;
+            }
             RssiValuesIncoming = new sbyte[] { (sbyte)payload[6], (sbyte)payload[7], (sbyte)payload[8], (sbyte)payload[9] };
             if (payload.Length <= 10)
+            {
                 return;
+            }
             AckChannelNo = payload[10];
             if (payload.Length <= 11)
+            {
                 return;
+            }
             LastTxChannelNo = payload[11];
             if (payload.Length <= 12)
+            {
                 return;
+            }
             RouteScheme = (RoutingSchemes)payload[12];
             if (payload.Length <= 16)
+            {
                 return;
+            }
             Repeaters = new byte[] { payload[13], payload[14], payload[15], payload[16] };
             if (payload.Length <= 17)
+            {
                 return;
+            }
             BeamSpeedByte = payload[17];
             RouteSpeed = (byte)(payload[17] & 0x07);
             if (payload.Length <= 18)
+            {
                 return;
+            }
             RouteTries = payload[18];
             if (payload.Length <= 19)
+            {
                 return;
+            }
             LastFailedLinkFrom = payload[19];
             if (payload.Length <= 20)
+            {
                 return;
+            }
             LastFailedLinkTo = payload[20];
             if (payload.Length <= 21)
+            {
                 return;
+            }
             UsedTxpower = (sbyte)payload[21];
             if (payload.Length <= 22)
+            {
                 return;
+            }
             MeasuredNoiseFloor = (sbyte)payload[22];
             if (payload.Length <= 23)
+            {
                 return;
+            }
             AckDestinationUsedTxPower = (sbyte)payload[23];
             if (payload.Length <= 24)
+            {
                 return;
+            }
             DestinationAckMeasuredRSSI = (sbyte)payload[24];
             if (payload.Length <= 25)
+            {
                 return;
+            }
             DestinationckMeasuredNoiseFloor = (sbyte)payload[25];
         }
 

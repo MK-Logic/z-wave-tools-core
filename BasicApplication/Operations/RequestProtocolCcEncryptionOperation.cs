@@ -44,7 +44,9 @@ namespace ZWave.BasicApplication.Operations
         {
             var payload = ou.DataFrame.Payload;
             if (payload == null || payload.Length < 2)
+            {
                 return;
+            }
             int idx = 0;
             ushort destinationNodeId;
             if (NetworkView != null && NetworkView.IsNodeIdBaseTypeLR && payload.Length >= idx + 2)
@@ -57,25 +59,37 @@ namespace ZWave.BasicApplication.Operations
                 destinationNodeId = payload[idx++];
             }
             else
+            {
                 return;
+            }
             if (idx >= payload.Length)
+            {
                 return;
+            }
             byte payloadLength = payload[idx++];
             if (payloadLength > payload.Length - idx)
+            {
                 return;
+            }
             byte[] plainPayload = new byte[payloadLength];
             Buffer.BlockCopy(payload, idx, plainPayload, 0, payloadLength);
             idx += payloadLength;
             if (idx >= payload.Length)
+            {
                 return;
+            }
             byte protocolMetadataLength = payload[idx++];
             if (protocolMetadataLength > payload.Length - idx)
+            {
                 return;
+            }
             byte[] protocolMetadata = new byte[protocolMetadataLength];
             Buffer.BlockCopy(payload, idx, protocolMetadata, 0, protocolMetadataLength);
             idx += protocolMetadataLength;
             if (idx + 2 > payload.Length)
+            {
                 return;
+            }
             byte useSupervision = payload[idx++];
             byte sessionId = payload[idx];
             var data = new RequestProtocolCcEncryptionData(
