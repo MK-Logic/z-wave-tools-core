@@ -208,11 +208,15 @@ namespace ZWave.BasicApplication.Operations
         public bool HasTxTransmitReport { get; set; }
         public ushort TransmitTicks { get; set; }
         public byte RepeatersCount { get; set; }
+        /// <summary>RSSI of the ACK frame (0xAC / NLS TX report byte 5).</summary>
+        public sbyte AckRssi { get; set; }
         public sbyte[] RssiValuesIncoming { get; set; }
         public byte AckChannelNo { get; set; }
         public byte LastTxChannelNo { get; set; }
         public RoutingSchemes RouteScheme { get; set; }
         public byte[] Repeaters { get; set; }
+        /// <summary>Combined beam/speed byte (beam_1000ms bit6, beam_250ms bit5, last_route_speed bits 0-2). Used for 0x6C callback.</summary>
+        public byte BeamSpeedByte { get; set; }
         public byte RouteSpeed { get; set; }
         public byte RouteTries { get; set; }
         public byte LastFailedLinkFrom { get; set; }
@@ -232,11 +236,13 @@ namespace ZWave.BasicApplication.Operations
                 HasTxTransmitReport = result.HasTxTransmitReport;
                 TransmitTicks = result.TransmitTicks;
                 RepeatersCount = result.RepeatersCount;
+                AckRssi = result.AckRssi;
                 RssiValuesIncoming = result.RssiValuesIncoming;
                 AckChannelNo = result.AckChannelNo;
                 LastTxChannelNo = result.LastTxChannelNo;
                 RouteScheme = result.RouteScheme;
                 Repeaters = result.Repeaters;
+                BeamSpeedByte = result.BeamSpeedByte;
                 RouteSpeed = result.RouteSpeed;
                 RouteTries = result.RouteTries;
                 LastFailedLinkFrom = result.LastFailedLinkFrom;
@@ -257,11 +263,13 @@ namespace ZWave.BasicApplication.Operations
                 HasTxTransmitReport = result.HasTxTransmitReport;
                 TransmitTicks += result.TransmitTicks;
                 RepeatersCount = result.RepeatersCount;
+                AckRssi = result.AckRssi;
                 RssiValuesIncoming = result.RssiValuesIncoming;
                 AckChannelNo = result.AckChannelNo;
                 LastTxChannelNo = result.LastTxChannelNo;
                 RouteScheme = result.RouteScheme;
                 Repeaters = result.Repeaters;
+                BeamSpeedByte = result.BeamSpeedByte;
                 RouteSpeed = result.RouteSpeed;
                 RouteTries += result.RouteTries;
                 LastFailedLinkFrom = result.LastFailedLinkFrom;

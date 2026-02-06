@@ -86,11 +86,16 @@ namespace ZWave.BasicApplication.Operations
                     if (payload.Length > index)
                     {
                         SpecificResult.RepeatersCount = payload[index];
-                        index += 5;
+                        index++;
                         if (payload.Length > index)
                         {
-                            SpecificResult.RssiValuesIncoming = new sbyte[] { (sbyte)payload[index - 4], (sbyte)payload[index - 3], (sbyte)payload[index - 2], (sbyte)payload[index - 1], (sbyte)payload[index] };
+                            SpecificResult.AckRssi = (sbyte)payload[index];
                             index++;
+                            if (payload.Length > index + 3)
+                            {
+                                SpecificResult.RssiValuesIncoming = new sbyte[] { (sbyte)payload[index], (sbyte)payload[index + 1], (sbyte)payload[index + 2], (sbyte)payload[index + 3] };
+                                index += 4;
+                            }
                             if (payload.Length > index)
                             {
                                 SpecificResult.AckChannelNo = payload[index];
@@ -115,7 +120,8 @@ namespace ZWave.BasicApplication.Operations
                                             index++;
                                             if (payload.Length > index)
                                             {
-                                                SpecificResult.RouteSpeed = payload[index];
+                                                SpecificResult.BeamSpeedByte = payload[index];
+                                                SpecificResult.RouteSpeed = (byte)(payload[index] & 0x07);
                                                 index++;
                                                 if (payload.Length > index)
                                                 {

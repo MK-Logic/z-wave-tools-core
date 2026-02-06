@@ -51,8 +51,7 @@ namespace ZWave.BasicApplication.Operations
             sbyte rssi1 = (rssi != null && rssi.Length > 1) ? rssi[1] : (sbyte)0;
             sbyte rssi2 = (rssi != null && rssi.Length > 2) ? rssi[2] : (sbyte)0;
             sbyte rssi3 = (rssi != null && rssi.Length > 3) ? rssi[3] : (sbyte)0;
-            // C: beam_1000ms (bit6), beam_250ms (bit5), last_route_speed (bits 0-2)
-            byte beamSpeed = (byte)((r != null ? (int)r.RouteSpeed & 0x07 : 0));
+            byte beamSpeedByte = r?.BeamSpeedByte ?? (byte)((r?.RouteSpeed ?? 0) & 0x07);
             return new byte[]
             {
                 SessionId,
@@ -60,7 +59,7 @@ namespace ZWave.BasicApplication.Operations
                 (byte)((r?.TransmitTicks ?? 0) >> 8),
                 (byte)((r?.TransmitTicks ?? 0) & 0xFF),
                 r?.RepeatersCount ?? 0,
-                0, // ack_rssi (not stored in SendDataResult)
+                (byte)(r?.AckRssi ?? 0),
                 (byte)rssi0,
                 (byte)rssi1,
                 (byte)rssi2,
@@ -72,7 +71,7 @@ namespace ZWave.BasicApplication.Operations
                 rep1,
                 rep2,
                 rep3,
-                beamSpeed,
+                beamSpeedByte,
                 r?.RouteTries ?? 0,
                 r?.LastFailedLinkFrom ?? 0,
                 r?.LastFailedLinkTo ?? 0,
