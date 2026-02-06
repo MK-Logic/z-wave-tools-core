@@ -172,12 +172,26 @@ namespace ZWave.BasicApplication.Operations
                 if (NLS_STATE_REPORT.properties1.nlsState == 1)
                 {
                     _securityManagerInfo.Network.SetNlsState(SpecificResult.Node, true);
-                    _EnableNodeNls.NodeId = SpecificResult.Node;
-                    unit.SetNextActionItems(_EnableNodeNls);
+                    if (IsEnableNodeNlsSupported())
+                    {
+                        _EnableNodeNls.NodeId = SpecificResult.Node;
+                        unit.SetNextActionItems(_EnableNodeNls);
+                    }
                 }
             }
             _securityManagerInfo.IsInclusion = false;
             SetStateCompleted(unit);
+        }
+
+        private bool IsEnableNodeNlsSupported()
+        {
+            var supported = _network?.SupportedSerialApiCommands;
+            if (supported == null)
+            {
+                return false;
+            }
+            byte cmd = (byte)CommandTypes.CmdZWaveEnableNodeNls;
+            return cmd < supported.Length && supported[cmd];
         }
 
         private void OnEnableNodeNlsCompleted(ActionCompletedUnit unit)

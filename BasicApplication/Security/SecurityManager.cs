@@ -284,14 +284,17 @@ namespace ZWave.BasicApplication
                                                     if (nlsReport.properties1.capability != 0 && nlsReport.properties1.nlsState != 0)
                                                     {
                                                         SecurityManagerInfo.Network.SetNlsState(srcNode, true);
-                                                        var enableNlsOp = new EnableNodeNlsOperation(_network, srcNode);
-                                                        if (additionalAction != null)
+                                                        if (IsEnableNodeNlsSerialApiSupported())
                                                         {
-                                                            additionalAction = new ActionSerialGroup(enableNlsOp, additionalAction);
-                                                        }
-                                                        else
-                                                        {
-                                                            additionalAction = enableNlsOp;
+                                                            var enableNlsOp = new EnableNodeNlsOperation(_network, srcNode);
+                                                            if (additionalAction != null)
+                                                            {
+                                                                additionalAction = new ActionSerialGroup(enableNlsOp, additionalAction);
+                                                            }
+                                                            else
+                                                            {
+                                                                additionalAction = enableNlsOp;
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -433,6 +436,17 @@ namespace ZWave.BasicApplication
                     }
                 }
             }
+        }
+
+        private bool IsEnableNodeNlsSerialApiSupported()
+        {
+            var supported = SecurityManagerInfo?.Network?.SupportedSerialApiCommands;
+            if (supported == null)
+            {
+                return false;
+            }
+            byte cmd = (byte)CommandTypes.CmdZWaveEnableNodeNls;
+            return cmd < supported.Length && supported[cmd];
         }
 
         private void ApplyS2MessageExtensionsOnSuccess(NodeTag srcNode, byte[] command, ref ActionBase additionalAction)
