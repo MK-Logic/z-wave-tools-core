@@ -274,6 +274,27 @@ namespace ZWave.BasicApplication
                                                     else
                                                         additionalAction = transferOp;
                                                 }
+                                                // NLS: When decrypted inner command is NLS State Report (capability and state enabled),
+                                                // update in-memory state and module NVM via Enable Node NLS (0x6A)
+                                                else if (data != null && data.Length >= 3 &&
+                                                    data[0] == COMMAND_CLASS_SECURITY_2_V2.ID &&
+                                                    data[1] == COMMAND_CLASS_SECURITY_2_V2.NLS_STATE_REPORT.ID)
+                                                {
+                                                    var nlsReport = (COMMAND_CLASS_SECURITY_2_V2.NLS_STATE_REPORT)data;
+                                                    if (nlsReport.properties1.capability != 0 && nlsReport.properties1.nlsState != 0)
+                                                    {
+                                                        SecurityManagerInfo.Network.SetNlsState(srcNode, true);
+                                                        var enableNlsOp = new EnableNodeNlsOperation(_network, srcNode);
+                                                        if (additionalAction != null)
+                                                        {
+                                                            additionalAction = new ActionSerialGroup(enableNlsOp, additionalAction);
+                                                        }
+                                                        else
+                                                        {
+                                                            additionalAction = enableNlsOp;
+                                                        }
+                                                    }
+                                                }
                                                 bool hasMpanExtension = false;
                                                 if (extensions != null && extensions.EncryptedExtensionsList != null && extensions.EncryptedExtensionsList.Count > 0)
                                                 {
