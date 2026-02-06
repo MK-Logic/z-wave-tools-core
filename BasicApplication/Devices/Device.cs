@@ -1303,10 +1303,15 @@ namespace ZWave.BasicApplication.Devices
 
         /// <summary>
         /// Syncs host view of NLS state from controller module NVM (e.g. after startup / GetInitData).
+        /// Only runs if the module reports support for Get NLS Nodes (0xC0).
         /// </summary>
         private void SyncNlsStateFromModule()
         {
             if (Network == null)
+            {
+                return;
+            }
+            if (SupportedSerialApiCommands == null || !SupportedSerialApiCommands.Contains((byte)CommandTypes.CmdSerialApiGetNlsNodes))
             {
                 return;
             }
