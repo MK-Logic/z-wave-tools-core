@@ -260,10 +260,11 @@ namespace ZWave.BasicApplication
                                                 if (data != null && data.Length >= 1 && (data[0] == 0x01 /*ZW Protocol CC*/ || data[0] == 0x04 /*ZWLR CC*/))
                                                 {
                                                     var nlsPeerNodeId = new InvariantPeerNodeId(destNode, srcNode);
-                                                    byte decryptionKey = 0;
+                                                    byte decryptionKey = (byte)SecuritySchemes.NONE;
                                                     if (SecurityManagerInfo.ScKeys.TryGetValue(nlsPeerNodeId, out var nlsSckey))
                                                     {
                                                         var scheme = nlsSckey.SecurityScheme;
+                                                        // S2_TEMP cannot be mapped; use NONE as fallback.
                                                         decryptionKey = scheme == SecuritySchemes.S2_TEMP ? (byte)SecuritySchemes.NONE : (byte)scheme;
                                                     }
                                                     var transferOp = new TransferProtocolCcOperation(_network, srcNode, decryptionKey, data);
