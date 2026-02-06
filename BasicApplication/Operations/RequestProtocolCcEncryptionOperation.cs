@@ -9,7 +9,7 @@ namespace ZWave.BasicApplication.Operations
 {
     /// <summary>
     /// Listens for Request Protocol CC Encryption (0x6C) from the module.
-    /// ZW->HOST: REQ | 0x6C | destination_node_id | payload_length | payload | protocol_metadata_length | protocol_metadata | use_supervision | session_id
+    /// ZW->HOST: REQ | 0x6C (Request Protocol CC Encryption) | destination_node_id | payload_length | payload | protocol_metadata_length | protocol_metadata | use_supervision | session_id
     /// Host shall encrypt the payload (NLS) and send via <see cref="ControllerNodeSendProtocolDataOperation"/>,
     /// then report TX result via <see cref="RequestProtocolCcEncryptionCallbackOperation"/>.
     /// </summary>
@@ -94,7 +94,7 @@ namespace ZWave.BasicApplication.Operations
     }
 
     /// <summary>
-    /// Parsed data from Request Protocol CC Encryption (0x6C) frame.
+    /// Parsed data from Request Protocol CC Encryption (0x6C) Serial API frame.
     /// </summary>
     public class RequestProtocolCcEncryptionData
     {
