@@ -143,107 +143,79 @@ namespace ZWave.BasicApplication.Operations
         public SubstituteStatuses TxSubstituteStatus { get; set; }
 
         /// <summary>
-        /// Fills this result from the standard TX report payload layout (Send Data / Controller Node Send Protocol Data (0xAC) callback).
-        /// Layout: [0]FuncId, [1]TxStatus, [2-3]TransmitTicks, [4]RepeatersCount, [5]AckRssi, [6-9]Rssi×4,
-        /// [10]AckChannelNo, [11]LastTxChannelNo, [12]RouteScheme, [13-16]Repeaters×4, [17]BeamSpeedByte,
-        /// [18]RouteTries, [19]LastFailedLinkFrom, [20]LastFailedLinkTo, [21]UsedTxpower, [22]MeasuredNoiseFloor,
-        /// [23]AckDestinationUsedTxPower, [24]DestinationAckMeasuredRSSI, [25]DestinationckMeasuredNoiseFloor.
+        /// Fills this result from the callback payload per Z-Wave Host API spec (CSWG).
+        /// Callback frame layout: [0]Z-Wave API Command ID, [1]Session identifier, [2]Tx Status, [3..]Tx Status Report.
+        /// Tx Status Report: [0-1]Transmit Ticks, [2]Number of repeaters, [3]Ack RSSI, [4-7]RSSI Repeater 0-3,
+        /// [8]ACK Channel No, [9]Tx Channel No, [10]Route Scheme, [11-14]Last Route Repeater 0-3, [15]beam/speed,
+        /// [16]Routing Attempts, [17-18]Last failed link from/to, [19]Tx Power, [20]Noise Floor, [21-23]Destination Ack....
         /// </summary>
         public void FillFromTxReportPayload(byte[] payload)
         {
-            if (payload == null || payload.Length < 2)
+            if (payload == null || payload.Length < 3)
             {
                 return;
             }
             FuncId = payload[0];
-            TransmitStatus = (TransmitStatuses)payload[1];
-            if (payload.Length <= 3)
-            {
-                return;
-            }
-            HasTxTransmitReport = true;
-            TransmitTicks = (ushort)((payload[2] << 8) | payload[3]);
-            if (payload.Length <= 4)
-            {
-                return;
-            }
-            RepeatersCount = payload[4];
+            TransmitStatus = (TransmitStatuses)payload[2];
             if (payload.Length <= 5)
             {
                 return;
             }
-            AckRssi = (sbyte)payload[5];
-            if (payload.Length <= 9)
+            HasTxTransmitReport = true;
+            TransmitTicks = (ushort)((payload[3] << 8) | payload[4]);
+            if (payload.Length <= 6)
             {
                 return;
             }
-            RssiValuesIncoming = new sbyte[] { (sbyte)payload[6], (sbyte)payload[7], (sbyte)payload[8], (sbyte)payload[9] };
-            if (payload.Length <= 10)
-            {
-                return;
-            }
-            AckChannelNo = payload[10];
+            RepeatersCount = payload[5];
+            AckRssi = (sbyte)payload[6];
             if (payload.Length <= 11)
             {
                 return;
             }
-            LastTxChannelNo = payload[11];
-            if (payload.Length <= 12)
+            RssiValuesIncoming = new sbyte[] { (sbyte)payload[7], (sbyte)payload[8], (sbyte)payload[9], (sbyte)payload[10] };
+            AckChannelNo = payload[11];
+            if (payload.Length <= 13)
             {
                 return;
             }
-            RouteScheme = (RoutingSchemes)payload[12];
-            if (payload.Length <= 16)
-            {
-                return;
-            }
-            Repeaters = new byte[] { payload[13], payload[14], payload[15], payload[16] };
-            if (payload.Length <= 17)
-            {
-                return;
-            }
-            BeamSpeedByte = payload[17];
-            RouteSpeed = (byte)(payload[17] & 0x07);
+            LastTxChannelNo = payload[12];
+            RouteScheme = (RoutingSchemes)payload[13];
             if (payload.Length <= 18)
             {
                 return;
             }
-            RouteTries = payload[18];
+            Repeaters = new byte[] { payload[14], payload[15], payload[16], payload[17] };
+            BeamSpeedByte = payload[18];
+            RouteSpeed = (byte)(payload[18] & 0x07);
             if (payload.Length <= 19)
             {
                 return;
             }
-            LastFailedLinkFrom = payload[19];
-            if (payload.Length <= 20)
-            {
-                return;
-            }
-            LastFailedLinkTo = payload[20];
+            RouteTries = payload[19];
             if (payload.Length <= 21)
             {
                 return;
             }
-            UsedTxpower = (sbyte)payload[21];
+            LastFailedLinkFrom = payload[20];
+            LastFailedLinkTo = payload[21];
             if (payload.Length <= 22)
             {
                 return;
             }
-            MeasuredNoiseFloor = (sbyte)payload[22];
-            if (payload.Length <= 23)
-            {
-                return;
-            }
-            AckDestinationUsedTxPower = (sbyte)payload[23];
+            UsedTxpower = (sbyte)payload[22];
             if (payload.Length <= 24)
             {
                 return;
             }
-            DestinationAckMeasuredRSSI = (sbyte)payload[24];
-            if (payload.Length <= 25)
+            MeasuredNoiseFloor = (sbyte)payload[23];
+            AckDestinationUsedTxPower = (sbyte)payload[24];
+            if (payload.Length <= 26)
             {
                 return;
             }
-            DestinationckMeasuredNoiseFloor = (sbyte)payload[25];
+            DestinationAckMeasuredRSSI = (sbyte)payload[25];
+            DestinationckMeasuredNoiseFloor = (sbyte)payload[26];
         }
 
         public void CopyFrom(SendDataResult result)
