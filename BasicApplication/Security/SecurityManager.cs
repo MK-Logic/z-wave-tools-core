@@ -256,7 +256,7 @@ namespace ZWave.BasicApplication
                                                 }
                                                 ApplyS2MessageExtensionsOnSuccess(srcNode, cmdData, ref additionalAction);
                                                 // NLS: When decrypted inner command is a Network Layer CC,
-                                                // transfer to module via 'Transfer Protocol CC' command (0x69)
+                                                // transfer to module via Transfer Protocol CC (0x69) command
                                                 if (data != null && data.Length >= 1 && (data[0] == 0x01 /*ZW Protocol CC*/ || data[0] == 0x04 /*ZWLR CC*/))
                                                 {
                                                     var nlsPeerNodeId = new InvariantPeerNodeId(destNode, srcNode);
@@ -824,7 +824,7 @@ namespace ZWave.BasicApplication
         }
 
         /// <summary>
-        /// Creates the NLS (Network Layer Security) listener for Request Protocol CC Encryption (0x6C).
+        /// Creates the NLS (Network Layer Security) listener for Request Protocol CC Encryption (0x6C) Serial API command.
         /// Pass the returned operation to AddSubstituteManager(securityManager, nlsOperation) so the listener is started.
         /// </summary>
         /// <param name="executeAsync">Callback to run follow-up operations (e.g. SessionClient.ExecuteAsync).</param>
@@ -838,8 +838,8 @@ namespace ZWave.BasicApplication
         /// <summary>
         /// Handles a 'Request Protocol CC Encryption' command (0x6C) from the module:
         /// 1. Encrypts payload with S2,
-        /// 2. sends via 'Controller Node Send Protocol Data' command (0xAC),
-        /// 3. reports TX via 'Request Protocol CC Encryption' command (0x6C) callback.
+        /// 2. sends via Controller Node Send Protocol Data (0xAC),
+        /// 3. reports TX via Request Protocol CC Encryption (0x6C) callback.
         /// </summary>
         private void HandleProtocolCcEncryptionRequest(RequestProtocolCcEncryptionData data, Action<ActionBase> executeAsync)
         {

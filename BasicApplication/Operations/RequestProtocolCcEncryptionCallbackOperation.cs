@@ -8,7 +8,7 @@ namespace ZWave.BasicApplication.Operations
 {
     /// <summary>
     /// Sends the TX report back to the module for a prior Request Protocol CC Encryption (0x6C) flow.
-    /// HOST->ZW: REQ | 0x6C | session_id | tx_status | tx_report...
+    /// HOST->ZW: REQ | 0x6C (Request Protocol CC Encryption) | session_id | tx_status | tx_report...
     /// Call after <see cref="ControllerNodeSendProtocolDataOperation"/> completes to report transmit result.
     /// </summary>
     public class RequestProtocolCcEncryptionCallbackOperation : ApiOperation

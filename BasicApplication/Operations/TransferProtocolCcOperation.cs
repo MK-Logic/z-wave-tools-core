@@ -7,7 +7,7 @@ using ZWave.Devices;
 namespace ZWave.BasicApplication.Operations
 {
     /// <summary>
-    /// Transfers a decrypted protocol (Network Layer) command from host to module (0x69).
+    /// Transfers a decrypted protocol (Network Layer) command from host to module (Transfer Protocol CC (0x69)).
     /// HOST->ZW: REQ | 0x69 | src_node_id | decryption_key | payload_length | payload[]
     /// ZW->HOST: RES | 0x69 | RetVal
     /// Used when host has decrypted an incoming NLS frame and the inner command is a Network Layer CC
