@@ -836,14 +836,36 @@ namespace ZWave.BasicApplication
         }
 
         /// <summary>
-        /// Handles a 'Request Protocol CC Encryption' command (0x6C) from the module:
+        /// Sends a Request Protocol CC Encryption (0x6C) callback to the module (e.g. on error or after Controller Node Send Protocol Data (0xAC) completes).
+        /// The host must always respond to every 0x6C request with a callback per the host API spec.
+        /// </summary>
+        private void SendRequestProtocolCcEncryptionCallback(byte sessionId, byte txStatus, SendDataResult txReport, Action<ActionBase> executeAsync)
+        {
+            if (executeAsync == null)
+            {
+                return;
+            }
+            executeAsync(new RequestProtocolCcEncryptionCallbackOperation(sessionId, txStatus, txReport));
+        }
+
+        /// <summary>
+        /// Handles a Request Protocol CC Encryption (0x6C) request from the module:
         /// 1. Encrypts payload with S2,
         /// 2. sends via Controller Node Send Protocol Data (0xAC),
         /// 3. reports TX via Request Protocol CC Encryption (0x6C) callback.
+        /// On any error (no key, encryption failure, etc.) still sends a 0x6C callback with a failure status so the module is not left waiting.
         /// </summary>
         private void HandleProtocolCcEncryptionRequest(RequestProtocolCcEncryptionData data, Action<ActionBase> executeAsync)
         {
-            if (!IsActive || executeAsync == null)
+            if (!IsActive)
+            {
+                if (executeAsync != null)
+                {
+                    SendRequestProtocolCcEncryptionCallback(data.SessionId, (byte)TransmitStatuses.CompleteFail, null, executeAsync);
+                }
+                return;
+            }
+            if (executeAsync == null)
             {
                 return;
             }
@@ -855,12 +877,14 @@ namespace ZWave.BasicApplication
                 var scheme = SecurityManagerInfo.Network.GetCurrentOrSwitchToHighestSecurityScheme(dstNode);
                 if (scheme == SecuritySchemes.NONE)
                 {
+                    SendRequestProtocolCcEncryptionCallback(data.SessionId, (byte)TransmitStatuses.CompleteFail, null, executeAsync);
                     return;
                 }
                 SecurityManagerInfo.ActivateNetworkKeyS2ForNode(peerNodeId, scheme, _network.IsLongRange(dstNode) && _network.IsLongRangeEnabled(dstNode));
             }
             if (!SecurityManagerInfo.ScKeys.TryGetValue(peerNodeId, out SinglecastKey sckey))
             {
+                SendRequestProtocolCcEncryptionCallback(data.SessionId, (byte)TransmitStatuses.CompleteFail, null, executeAsync);
                 return;
             }
             byte[] payloadToEncrypt = data.Payload;
@@ -883,16 +907,17 @@ namespace ZWave.BasicApplication
                 sckey, SecurityManagerInfo.SpanTable, srcNode, dstNode, SecurityManagerInfo.Network.HomeId, payloadToEncrypt, null, new SubstituteSettings());
             if (encryptedMsg == null)
             {
+                SendRequestProtocolCcEncryptionCallback(data.SessionId, (byte)TransmitStatuses.CompleteFail, null, executeAsync);
                 return;
             }
             var sendOp = new ControllerNodeSendProtocolDataOperation(_network, dstNode, encryptedMsg, data.ProtocolMetadata, data.SessionId);
             sendOp.CompletedCallback = completed =>
             {
                 var sendResult = (completed as ControllerNodeSendProtocolDataOperation)?.SpecificResult;
-                if (sendResult != null)
-                {
-                    executeAsync(new RequestProtocolCcEncryptionCallbackOperation(data.SessionId, (byte)sendResult.TransmitStatus, sendResult));
-                }
+                byte txStatus = sendResult != null
+                    ? (byte)sendResult.TransmitStatus
+                    : (byte)TransmitStatuses.ResMissing;
+                SendRequestProtocolCcEncryptionCallback(data.SessionId, txStatus, sendResult, executeAsync);
             };
             executeAsync(sendOp);
         }
