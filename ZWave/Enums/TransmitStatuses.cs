@@ -21,13 +21,22 @@ namespace ZWave.Enums
         /// </summary>
         CompleteFail = 0x02,
         /// <summary>
+        /// Transmission failed due to routing being locked/busy.
+        /// </summary>
+        RoutingNotIdle = 0x03,
+        /// <summary>
         /// No route found in Assign Route.
         /// </summary>
         CompleteNoRoute = 0x04,
         /// <summary>
-        /// No Communication ACK received.
+        /// Transmission completed and successful, including S2 resynchronization back-off.
         /// </summary>
-        NoAcknowledge = 0x05,
+        CompleteVerified = 0x05,
+        /// <summary>
+        /// Backwards compatibility: same as CompleteNoAcknowledge (0x01). Do not use for new code.
+        /// (Historically this member was 0x05, which was incorrect per CSWG; 0x05 is now CompleteVerified.)
+        /// </summary>
+        NoAcknowledge = CompleteNoAcknowledge,
         /// <summary>
         /// No response received.
         /// </summary>
