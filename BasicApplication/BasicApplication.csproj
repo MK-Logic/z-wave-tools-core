@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -99,8 +99,10 @@
     <Compile Include="Operations\ControllerNodeSendProtocolDataOperation.cs" />
     <Compile Include="Operations\TransferProtocolCcOperation.cs" />
     <Compile Include="Operations\SerialApiGetLRNodesOperation.cs" />
+    <Compile Include="Operations\SerialApiGetNlsNodesOperation.cs" />
     <Compile Include="Operations\GetMaxLrTxPowerOperation.cs" />
     <Compile Include="Operations\EnableRadioPTIOperation .cs" />
+    <Compile Include="Operations\EnableNodeNlsOperation.cs" />
     <Compile Include="Operations\SetDefaultTxPowerLevel16BitOperation.cs" />
     <Compile Include="Operations\SetMaxLrTxPowerOperation.cs" />
     <Compile Include="Operations\SerialApiSetNodeIdBaseTypeOperation.cs" />
@@ -305,6 +307,7 @@
     <Compile Include="Operations\AddNodeOperation.cs" />
     <Compile Include="Operations\ExploreRequestInclusionOperation.cs" />
     <Compile Include="Operations\GetNodeProtocolInfoOperation.cs" />
+    <Compile Include="Operations\GetNodeNlsStateOperation.cs" />
     <Compile Include="Operations\GetProtocolStatusOperation.cs" />
     <Compile Include="Operations\GetRandomWordOperation.cs" />
     <Compile Include="Operations\RandomOperation.cs" />
