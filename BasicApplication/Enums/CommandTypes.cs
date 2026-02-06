@@ -21,6 +21,10 @@ namespace ZWave.BasicApplication.Enums
         /// </summary>
         CmdSerialApiGetLRNodes = 0xDA,
         /// <summary>
+        /// Command to get NLS Nodes.
+        /// </summary>
+        CmdSerialApiGetNlsNodes = 0xC0,
+        /// <summary>
         /// Command to generate the Node Information frame and to save information about Node capabilities.
         /// </summary>
         CmdSerialApiApplNodeInformation = 0x03,
@@ -92,6 +96,15 @@ namespace ZWave.BasicApplication.Enums
         /// Used for Network Layer Security (NLS); host performs S2 encryption and returns encrypted frame to module.
         /// </summary>
         CmdZWaveRequestProtocolCcEncryption = 0x6C,
+        /// <summary>
+        /// This command is used to enable the state of network layer security (NLS) of an included node.
+        /// NLS state cannot be disabled after it has been enabled.
+        /// </summary>
+        CmdZWaveEnableNodeNls = 0x6A,
+        /// <summary>
+        /// Command to get NLS state for a node.
+        /// </summary>
+        CmdZWaveGetNodeNlsState = 0x6B,
         /// <summary>
         /// Command to transmit encrypted protocol (Network Layer) data to a Z-Wave Node.
         /// Used for Network Layer Security (NLS); host sends encrypted frame to module for RF transmission.

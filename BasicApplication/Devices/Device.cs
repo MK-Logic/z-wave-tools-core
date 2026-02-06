@@ -1299,6 +1299,36 @@ namespace ZWave.BasicApplication.Devices
             return ExecuteAsync(new SerialApiGetLRNodesOperation(Network), completedCallback);
         }
 
+        public SerialApiGetNlsNodesResult SerialApiGetNlsNodes()
+        {
+            return (SerialApiGetNlsNodesResult)Execute(new SerialApiGetNlsNodesOperation(Network));
+        }
+
+        public ActionToken SerialApiGetNlsNodes(Action<IActionItem> completedCallback)
+        {
+            return ExecuteAsync(new SerialApiGetNlsNodesOperation(Network), completedCallback);
+        }
+
+        public EnableNodeNlsResult EnableNodeNls(NodeTag nodeId)
+        {
+            return (EnableNodeNlsResult)Execute(new EnableNodeNlsOperation(Network, nodeId));
+        }
+
+        public ActionToken EnableNodeNls(NodeTag nodeId, Action<IActionItem> completedCallback)
+        {
+            return ExecuteAsync(new EnableNodeNlsOperation(Network, nodeId), completedCallback);
+        }
+
+        public GetNodeNlsStateResult GetNodeNlsState(NodeTag nodeId)
+        {
+            return (GetNodeNlsStateResult)Execute(new GetNodeNlsStateOperation(Network, nodeId));
+        }
+
+        public ActionToken GetNodeNlsState(NodeTag nodeId, Action<IActionItem> completedCallback)
+        {
+            return ExecuteAsync(new GetNodeNlsStateOperation(Network, nodeId), completedCallback);
+        }
+
         public ActionResult SetExtIntLevel(byte intSrc, bool triggerLevel)
         {
             return Execute(new SetExtIntLevelOperation(intSrc, triggerLevel));
