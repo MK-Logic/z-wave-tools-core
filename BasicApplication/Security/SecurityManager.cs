@@ -32,6 +32,7 @@ namespace ZWave.BasicApplication
 
         private byte _fragmentSequenceCounter = 1;
         private static byte _nlsSupervisionSessionId;
+        private const int NlsSendProtocolDataMaxAttempts = 3;
 
         #endregion
 
@@ -846,6 +847,10 @@ namespace ZWave.BasicApplication
             {
                 return;
             }
+            if (sessionId == 0)
+            {
+                return;
+            }
             executeAsync(new RequestProtocolCcEncryptionCallbackOperation(sessionId, txStatus, txReport));
         }
 
@@ -911,16 +916,34 @@ namespace ZWave.BasicApplication
                 SendRequestProtocolCcEncryptionCallback(data.SessionId, (byte)TransmitStatuses.CompleteFail, null, executeAsync);
                 return;
             }
-            var sendOp = new ControllerNodeSendProtocolDataOperation(_network, dstNode, encryptedMsg, data.ProtocolMetadata, data.SessionId);
-            sendOp.CompletedCallback = completed =>
+            void SendProtocolDataAttempt(int attempt)
             {
-                var sendResult = (completed as ControllerNodeSendProtocolDataOperation)?.SpecificResult;
-                byte txStatus = sendResult != null
-                    ? (byte)sendResult.TransmitStatus
-                    : (byte)TransmitStatuses.ResMissing;
-                SendRequestProtocolCcEncryptionCallback(data.SessionId, txStatus, sendResult, executeAsync);
-            };
-            executeAsync(sendOp);
+                var sendOp = new ControllerNodeSendProtocolDataOperation(_network, dstNode, encryptedMsg, data.ProtocolMetadata, data.SessionId);
+                sendOp.CompletedCallback = completed =>
+                {
+                    var sendResult = (completed as ControllerNodeSendProtocolDataOperation)?.SpecificResult;
+                    var status = sendResult?.TransmitStatus ?? TransmitStatuses.ResMissing;
+                    var completedAction = completed as ActionBase;
+                    if (status == TransmitStatuses.ResMissing &&
+                        completedAction != null &&
+                        completedAction.Result.State == ZWave.ActionStates.Failed)
+                    {
+                        status = TransmitStatuses.CompleteFail;
+                    }
+                    bool success = status == TransmitStatuses.CompleteOk || status == TransmitStatuses.CompleteVerified;
+                    bool canRetry = !success
+                        && attempt < NlsSendProtocolDataMaxAttempts
+                        && status != TransmitStatuses.ResMissing;
+                    if (canRetry)
+                    {
+                        SendProtocolDataAttempt(attempt + 1);
+                        return;
+                    }
+                    SendRequestProtocolCcEncryptionCallback(data.SessionId, (byte)status, sendResult, executeAsync);
+                };
+                executeAsync(sendOp);
+            }
+            SendProtocolDataAttempt(1);
         }
 
         public override ActionBase SubstituteActionInternal(ApiOperation apiAction)
