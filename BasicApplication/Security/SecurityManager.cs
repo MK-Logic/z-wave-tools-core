@@ -886,6 +886,7 @@ namespace ZWave.BasicApplication
             {
                 return;
             }
+            "NLS 0x6C callback sent: sessionId={0}, txStatus=0x{1:X2}"._DLOG(sessionId, txStatus);
             executeAsync(new RequestProtocolCcEncryptionCallbackOperation(sessionId, txStatus, txReport));
         }
 

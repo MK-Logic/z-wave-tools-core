@@ -95,6 +95,7 @@ namespace ZWave.BasicApplication.Operations
 
         protected override void SetStateCompleted(IActionUnit ou)
         {
+            "Request Node Info 0x49: NodeInfoReceived for node {0}"._DLOG(Node.Id);
             byte[] res = ((DataReceivedUnit)ou).DataFrame.Payload;
             if (_network.IsNodeIdBaseTypeLR ? res[3] > 0 : res[2] > 0)
             {
@@ -132,6 +133,12 @@ namespace ZWave.BasicApplication.Operations
                 { }
             }
             base.SetStateCompleted(ou);
+        }
+
+        protected override void SetStateFailed(IActionUnit ou)
+        {
+            "Request Node Info: Failed (timeout or 0x49 ReqFailed / 0x60 false)"._DLOG();
+            base.SetStateFailed(ou);
         }
 
         public RequestNodeInfoResult SpecificResult

@@ -100,6 +100,8 @@ namespace ZWave.BasicApplication.Operations
                 var normalized = data.Skip(1).ToArray();
                 SpecificResult.FillFromTxReportPayload(normalized);
             }
+            "NLS 0xAC callback: SessionId={0}, status={1}, Data.Length={2}, data={3}"._DLOG(
+                SessionId, SpecificResult.TransmitStatus, data?.Length ?? 0, data?.GetHex() ?? "");
         }
 
         public override string AboutMe()
