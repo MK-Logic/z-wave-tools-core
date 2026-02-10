@@ -606,7 +606,6 @@ namespace ZWave.BasicApplication.Devices
                                 {
                                     ((Controller)this).IncludedNodes = res.IncludedNodes;
                                 }
-                                SyncNlsStateFromModule();
                             }
                             completedCallback?.Invoke(action);
                         }
@@ -758,7 +757,6 @@ namespace ZWave.BasicApplication.Devices
                     {
                         ((Controller)this).IncludedNodes = res.IncludedNodes;
                     }
-                    SyncNlsStateFromModule();
                 }
             }
             else if (actionItem is SerialApiGetLRNodesOperation)
@@ -1302,10 +1300,10 @@ namespace ZWave.BasicApplication.Devices
         }
 
         /// <summary>
-        /// Syncs host view of NLS state from controller module NVM (e.g. after startup / GetInitData).
-        /// Only runs if the module reports support for Get NLS Nodes (0xC0).
+        /// Syncs host view of NLS state from controller module NVM (e.g. after GetCapabilities).
+        /// Only runs if the module reports support for Get NLS Nodes (0xC0). Call after SupportedSerialApiCommands is set.
         /// </summary>
-        private void SyncNlsStateFromModule()
+        public void SyncNlsStateFromModule()
         {
             if (Network == null)
             {
