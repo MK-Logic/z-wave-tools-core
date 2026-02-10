@@ -63,17 +63,20 @@ namespace ZWave.BasicApplication.Operations
         private void OnHandlerStarted(DataReceivedUnit ou)
         {
             SpecificResult.NeighborUpdateStatus = RequestNeighborUpdateStatuses.Started;
+            "Neighbors Update 0x48: Started"._DLOG();
         }
 
         private void OnHandlerDone(DataReceivedUnit ou)
         {
             SpecificResult.NeighborUpdateStatus = RequestNeighborUpdateStatuses.Done;
+            "Neighbors Update 0x48: Done"._DLOG();
             SetStateCompleted(ou);
         }
 
         private void OnHandlerFailed(DataReceivedUnit ou)
         {
             SpecificResult.NeighborUpdateStatus = RequestNeighborUpdateStatuses.Failed;
+            "Neighbors Update 0x48: Failed"._DLOG();
             SetStateCompleted(ou);
         }
 
