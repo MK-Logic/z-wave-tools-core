@@ -13,8 +13,9 @@ namespace ZWave.BasicApplication.Operations
     /// Sends encrypted protocol (Network Layer) data to the module for RF transmission (Controller Node Send Protocol Data (0xAC)).
     /// HOST->ZW: REQ | 0xAC | destination_node_id | data_length | data[] | protocol_metadata_length | protocol_metadata[] | session_id
     /// ZW->HOST: RES | 0xAC | RetVal
-    /// ZW->HOST: REQ | 0xAC | funcID | txStatus | ... (same callback as Send Data)
+    /// ZW->HOST: REQ | 0xAC | session_id | txStatus | tx_report...
     /// Used for NLS; only call after receiving <see cref="RequestProtocolCcEncryptionOperation"/> and encrypting the payload.
+    /// Unlike SendData (0x13), the 0xAC frame does NOT carry a funcId field. The session_id is the last byte.
     /// </summary>
     public class ControllerNodeSendProtocolDataOperation : CallbackApiOperation
     {
@@ -26,6 +27,8 @@ namespace ZWave.BasicApplication.Operations
         public ControllerNodeSendProtocolDataOperation(NetworkViewPoint network, NodeTag destinationNodeId, byte[] encryptedData, byte[] protocolMetadata, byte sessionId)
             : base(CommandTypes.CmdZWaveControllerNodeSendProtocolData)
         {
+            // Must run even when an exclusive parent operation is active (e.g. Neighbor Update waiting on NLS flow).
+            IsExclusive = false;
             _network = network;
             DestinationNodeId = destinationNodeId;
             Data = encryptedData ?? Array.Empty<byte>();
@@ -36,8 +39,20 @@ namespace ZWave.BasicApplication.Operations
         protected override void CreateInstance()
         {
             base.CreateInstance();
+            // 0xAC does not have a funcId field; session_id is already in CreateInputParameters.
+            // Prevent the framework from appending an extra SequenceNumber byte to the serial frame.
+            Message.IsSequenceNumberRequired = false;
             TimeoutMs = SubstituteSettings.CallbackWaitTimeoutMs;
             SpecificResult.TransmitStatus = TransmitStatuses.ResMissing;
+        }
+
+        /// <summary>
+        /// 0xAC callback uses Session identifier at data[2] (Data = [type, 0xAC, SessionId, TxStatus, ...]).
+        /// ApiHandler already matches data[0]=Request, data[1]=0xAC; match data[2]=SessionId.
+        /// </summary>
+        protected override ByteIndex[] GetCallbackMatchConditions()
+        {
+            return new ByteIndex[] { new ByteIndex(SessionId) };
         }
 
         protected override byte[] CreateInputParameters()
@@ -76,10 +91,14 @@ namespace ZWave.BasicApplication.Operations
 
         protected override void OnCallbackInternal(DataReceivedUnit ou)
         {
-            var payload = ou.DataFrame.Payload;
-            if (payload != null && payload.Length > 1)
+            // For 0xAC callback, Data is [type, 0xAC, session_id, tx_status, tx_report...].
+            // Normalize to FillFromTxReportPayload expected layout [cmd, session_id, tx_status, ...]
+            // to avoid mis-detecting tx_status from tx_report bytes.
+            var data = ou.DataFrame.Data;
+            if (data != null && data.Length > 3)
             {
-                SpecificResult.FillFromTxReportPayload(payload);
+                var normalized = data.Skip(1).ToArray();
+                SpecificResult.FillFromTxReportPayload(normalized);
             }
         }
 

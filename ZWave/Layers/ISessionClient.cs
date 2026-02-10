@@ -28,5 +28,10 @@ namespace ZWave.Layers
         ISubstituteManager GetSubstituteManager(Type type);
         void AddSubstituteManager(ISubstituteManager sm, params ActionBase[] actions);
         void ClearSubstituteManagers();
+        /// <summary>
+        /// Returns a currently running action of the given type, if any. Used by the application layer
+        /// e.g. to implement NLS completion workarounds without exposing session internals.
+        /// </summary>
+        bool TryGetRunningAction(Type actionType, out ActionBase action);
     }
 }
