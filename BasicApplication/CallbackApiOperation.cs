@@ -26,11 +26,11 @@ namespace ZWave.BasicApplication
             _commandAbort = commandAbort;
         }
 
-        private ApiMessage Message;
+        protected ApiMessage Message;
         private ApiMessage MessageAbort;
         private ApiHandler HandlerOk;
         private ApiHandler HandlerFailed;
-        private ApiHandler CallbackHandler;
+        private ApiHandler[] CallbackHandlers;
         private ITimeoutItem timeoutItem;
         protected override void CreateWorkflow()
         {
@@ -49,7 +49,13 @@ namespace ZWave.BasicApplication
             {
                 ActionUnits.Add(new DataReceivedUnit(HandlerOk, OnHandled, TimeoutMs));
             }
-            ActionUnits.Add(new DataReceivedUnit(CallbackHandler, OnCallback));
+            if (CallbackHandlers != null)
+            {
+                foreach (var callbackHandler in CallbackHandlers)
+                {
+                    ActionUnits.Add(new DataReceivedUnit(callbackHandler, OnCallback));
+                }
+            }
         }
 
         protected virtual void OnStart(StartActionUnit sau)
@@ -72,12 +78,27 @@ namespace ZWave.BasicApplication
             HandlerOk.AddConditions(new ByteIndex(0x01));
             HandlerFailed = new ApiHandler(SerialApiCommands[0]);
             HandlerFailed.AddConditions(new ByteIndex(0x00));
-            CallbackHandler = new ApiHandler(FrameTypes.Request, SerialApiCommands[0]);
-            CallbackHandler.AddConditions(new ByteIndex[]
-            {
-                new ByteIndex(SequenceNumber),
-            });
-            
+            CallbackHandlers = CreateCallbackHandlers();
+        }
+
+        /// <summary>
+        /// Returns the conditions used to match the callback frame (payload bytes). Default matches payload[0] to SequenceNumber.
+        /// Override e.g. for 0xAC where callback has payload[0]=0xAC, payload[1]=SessionId.
+        /// </summary>
+        protected virtual ByteIndex[] GetCallbackMatchConditions()
+        {
+            return new ByteIndex[] { new ByteIndex(SequenceNumber) };
+        }
+
+        /// <summary>
+        /// Returns callback handlers for this operation. Default: one callback handler for the operation command id.
+        /// Override when a command can callback on multiple command ids.
+        /// </summary>
+        protected virtual ApiHandler[] CreateCallbackHandlers()
+        {
+            var callbackHandler = new ApiHandler(FrameTypes.Request, SerialApiCommands[0]);
+            callbackHandler.AddConditions(GetCallbackMatchConditions());
+            return new[] { callbackHandler };
         }
 
         private void OnFailed(DataReceivedUnit ou)

@@ -1,6 +1,7 @@
 /// SPDX-License-Identifier: BSD-3-Clause
 /// SPDX-FileCopyrightText: Z-Wave Alliance https://z-wavealliance.org
 using System;
+using System.Collections.Generic;
 using ZWave.BasicApplication.Enums;
 using ZWave.Enums;
 
@@ -41,6 +42,19 @@ namespace ZWave.BasicApplication.Operations
         private byte[] CreateCallbackPayload()
         {
             var r = TxReport;
+            var payload = new List<byte>
+            {
+                SessionId,
+                TxStatus,
+            };
+
+            // Only append TX report fields when the report exists.
+            // This avoids sending a synthetic full report (all zeros) when module did not provide one.
+            if (r == null || !r.HasTxTransmitReport)
+            {
+                return payload.ToArray();
+            }
+
             byte[] rep = r?.Repeaters;
             byte rep0 = (rep != null && rep.Length > 0) ? rep[0] : (byte)0;
             byte rep1 = (rep != null && rep.Length > 1) ? rep[1] : (byte)0;
@@ -52,35 +66,32 @@ namespace ZWave.BasicApplication.Operations
             sbyte rssi2 = (rssi != null && rssi.Length > 2) ? rssi[2] : (sbyte)0;
             sbyte rssi3 = (rssi != null && rssi.Length > 3) ? rssi[3] : (sbyte)0;
             byte beamSpeedByte = r?.BeamSpeedByte ?? (byte)((r?.RouteSpeed ?? 0) & 0x07);
-            return new byte[]
-            {
-                SessionId,
-                TxStatus,
-                (byte)((r?.TransmitTicks ?? 0) >> 8),
-                (byte)((r?.TransmitTicks ?? 0) & 0xFF),
-                r?.RepeatersCount ?? 0,
-                (byte)(r?.AckRssi ?? 0),
-                (byte)rssi0,
-                (byte)rssi1,
-                (byte)rssi2,
-                (byte)rssi3,
-                r?.AckChannelNo ?? 0,
-                r?.LastTxChannelNo ?? 0,
-                (byte)(r?.RouteScheme ?? 0),
-                rep0,
-                rep1,
-                rep2,
-                rep3,
-                beamSpeedByte,
-                r?.RouteTries ?? 0,
-                r?.LastFailedLinkFrom ?? 0,
-                r?.LastFailedLinkTo ?? 0,
-                (byte)(r?.UsedTxpower ?? 0),
-                (byte)(r?.MeasuredNoiseFloor ?? 0),
-                (byte)(r?.AckDestinationUsedTxPower ?? 0),
-                (byte)(r?.DestinationAckMeasuredRSSI ?? 0),
-                (byte)(r?.DestinationckMeasuredNoiseFloor ?? 0),
-            };
+            payload.Add((byte)((r?.TransmitTicks ?? 0) >> 8));
+            payload.Add((byte)((r?.TransmitTicks ?? 0) & 0xFF));
+            payload.Add(r?.RepeatersCount ?? 0);
+            payload.Add((byte)(r?.AckRssi ?? 0));
+            payload.Add((byte)rssi0);
+            payload.Add((byte)rssi1);
+            payload.Add((byte)rssi2);
+            payload.Add((byte)rssi3);
+            payload.Add(r?.AckChannelNo ?? 0);
+            payload.Add(r?.LastTxChannelNo ?? 0);
+            payload.Add((byte)(r?.RouteScheme ?? 0));
+            payload.Add(rep0);
+            payload.Add(rep1);
+            payload.Add(rep2);
+            payload.Add(rep3);
+            payload.Add(beamSpeedByte);
+            payload.Add(r?.RouteTries ?? 0);
+            payload.Add(r?.LastFailedLinkFrom ?? 0);
+            payload.Add(r?.LastFailedLinkTo ?? 0);
+            payload.Add((byte)(r?.UsedTxpower ?? 0));
+            payload.Add((byte)(r?.MeasuredNoiseFloor ?? 0));
+            payload.Add((byte)(r?.AckDestinationUsedTxPower ?? 0));
+            payload.Add((byte)(r?.DestinationAckMeasuredRSSI ?? 0));
+            payload.Add((byte)(r?.DestinationckMeasuredNoiseFloor ?? 0));
+
+            return payload.ToArray();
         }
 
         protected override ActionResult CreateOperationResult()

@@ -160,6 +160,22 @@ namespace ZWave.Layers.Session
             _substituteManagersDictionary.Clear();
         }
 
+        public bool TryGetRunningAction(Type actionType, out ActionBase action)
+        {
+            action = null;
+            if (actionType == null || RunningActions == null)
+                return false;
+            foreach (var kv in RunningActions)
+            {
+                if (actionType.IsInstanceOfType(kv.Value) && kv.Value.Token.IsStateActive)
+                {
+                    action = kv.Value;
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public ActionToken ExecuteAsync(IActionItem actionItem)
         {
             ActionToken ret = null;
