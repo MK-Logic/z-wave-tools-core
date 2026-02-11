@@ -256,9 +256,9 @@ namespace ZWave.BasicApplication
                                                     _isPrevDecryptFailed[srcNode] = false;
                                                 }
                                                 ApplyS2MessageExtensionsOnSuccess(srcNode, cmdData, ref additionalAction);
-                                                // NLS: When decrypted inner command is a Network Layer CC,
+                                                // NLS: When decrypted inner command is a protocol CC,
                                                 // transfer to module via Transfer Protocol CC (0x69) command
-                                                if (data != null && data.Length >= 1 && (data[0] == 0x01 /*ZW Protocol CC*/ || data[0] == 0x04 /*ZWLR CC*/))
+                                                if (data != null && data.Length > 0 && (data[0] < 0x20 /*0x00..0x1F are protocol CCs*/))
                                                 {
                                                     var nlsPeerNodeId = new InvariantPeerNodeId(destNode, srcNode);
                                                     byte decryptionKey = (byte)SecuritySchemes.NONE;
