@@ -262,12 +262,23 @@ namespace ZWave.BasicApplication
                                                 {
                                                     var nlsPeerNodeId = new InvariantPeerNodeId(destNode, srcNode);
                                                     byte decryptionKey = (byte)SecuritySchemes.NONE;
+                                                    SecuritySchemes scheme = SecuritySchemes.NONE;
                                                     if (SecurityManagerInfo.ScKeys.TryGetValue(nlsPeerNodeId, out var nlsSckey))
                                                     {
-                                                        var scheme = nlsSckey.SecurityScheme;
+                                                        scheme = nlsSckey.SecurityScheme;
                                                         // S2_TEMP cannot be mapped; use NONE as fallback.
                                                         decryptionKey = scheme == SecuritySchemes.S2_TEMP ? (byte)SecuritySchemes.NONE : (byte)scheme;
                                                     }
+
+                                                    ($"RECEIVED:{Environment.NewLine}" +
+                                                    $"S2-Encapsulated Protocol Command{Environment.NewLine}" +
+                                                    $"│ Source Node:      {srcNode.ToString()}{Environment.NewLine}" +
+                                                    $"│ Destination Node: {destNode.ToString()}{Environment.NewLine}" +
+                                                    $"│ Security Scheme:  {scheme}{Environment.NewLine}" +
+                                                    $"│ Data:             {data.GetHex()}{Environment.NewLine}" +
+                                                    $"└─[Transfer Protocol CC Operation]{Environment.NewLine}" +
+                                                    $"    Decryption Key: 0x{decryptionKey:X2}")._DLOG();
+
                                                     var transferOp = new TransferProtocolCcOperation(_network, srcNode, decryptionKey, data);
                                                     if (additionalAction != null)
                                                         additionalAction = new ActionSerialGroup(transferOp, additionalAction);
