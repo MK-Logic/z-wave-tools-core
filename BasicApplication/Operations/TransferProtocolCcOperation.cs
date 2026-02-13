@@ -22,6 +22,8 @@ namespace ZWave.BasicApplication.Operations
         public TransferProtocolCcOperation(NetworkViewPoint network, NodeTag srcNode, byte decryptionKey, byte[] payload)
             : base(CommandTypes.CmdZWaveTransferProtocolCc)
         {
+            // Must run even when an exclusive operation is active (e.g. Neighbor Update). Host decrypted payload must be sent to chip without blocking.
+            IsExclusive = false;
             _network = network;
             SrcNode = srcNode;
             DecryptionKey = decryptionKey;
