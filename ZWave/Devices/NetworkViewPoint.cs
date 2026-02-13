@@ -428,6 +428,37 @@ namespace ZWave.Devices
             return Nodes[nodeId].NlsState;
         }
 
+        /// <summary>
+        /// Returns NLS-enabled node IDs starting at <paramref name="startNodeId"/> (inclusive), for building NLS Node List Report.
+        /// </summary>
+        /// <param name="startNodeId">First node ID to consider (inclusive).</param>
+        /// <param name="maxCount">Maximum number of node IDs to return.</param>
+        /// <param name="nextNodeId">Next node ID after the last returned, or 0 if no more.</param>
+        /// <returns>List of node IDs that have NLS enabled, in ascending order.</returns>
+        public IReadOnlyList<ushort> GetNlsNodeIdsFrom(ushort startNodeId, int maxCount, out ushort nextNodeId)
+        {
+            var list = new List<ushort>();
+            nextNodeId = 0;
+            for (ushort id = startNodeId; id <= 232 && list.Count < maxCount; id++)
+            {
+                if (id >= 233 && id <= 255)
+                    continue;
+                if (!GetNlsState(id))
+                    continue;
+                list.Add(id);
+            }
+            if (list.Count == maxCount && list.Count > 0)
+            {
+                ushort last = list[list.Count - 1];
+                for (ushort id = (ushort)(last + 1); id <= 232; id++)
+                {
+                    if (id >= 233 && id <= 255) continue;
+                    if (GetNlsState(id)) { nextNodeId = id; break; }
+                }
+            }
+            return list;
+        }
+
         public void SetCommandClasses(byte[] cmdClasses)
         {
             SetCommandClasses(NodeTag, cmdClasses);
