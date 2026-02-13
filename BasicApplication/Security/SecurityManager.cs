@@ -16,6 +16,7 @@ using ZWave.Devices;
 using ZWave.Enums;
 using ZWave.Layers.Frame;
 using ZWave.Security;
+using ZWave.Security.S2;
 
 namespace ZWave.BasicApplication
 {
@@ -308,6 +309,46 @@ namespace ZWave.BasicApplication
                                                             }
                                                         }
                                                     }
+                                                }
+                                                // NLS: When decrypted inner command is NLS Node List Get, respond with NLS Node List Report
+                                                else if (data != null && data.Length >= 2 &&
+                                                    data[0] == COMMAND_CLASS_SECURITY_2_V2.ID &&
+                                                    data[1] == COMMAND_CLASS_SECURITY_2_V2.NLS_NODE_LIST_GET.ID)
+                                                {
+                                                    var nlsGet = (COMMAND_CLASS_SECURITY_2_V2.NLS_NODE_LIST_GET)data;
+                                                    ushort startNodeId = (ushort)((nlsGet.properties1.startNodeIdMsb << 8) | (nlsGet.startNodeIdLsb.HasValue ? nlsGet.startNodeIdLsb : 0));
+                                                    const int maxEntriesPerReport = 15;
+                                                    var nlsNodeIds = SecurityManagerInfo.Network.GetNlsNodeIdsFrom(startNodeId, maxEntriesPerReport, out ushort nextNodeId);
+                                                    var report = new COMMAND_CLASS_SECURITY_2_V2.NLS_NODE_LIST_REPORT();
+                                                    report.numberOfEntries = (byte)nlsNodeIds.Count;
+                                                    foreach (var nodeId in nlsNodeIds)
+                                                    {
+                                                        var schemesList = new List<SecuritySchemes>();
+                                                        if (SecurityManagerInfo.Network.HasSecurityScheme(nodeId, SecuritySchemes.S2_ACCESS))
+                                                            schemesList.Add(SecuritySchemes.S2_ACCESS);
+                                                        if (SecurityManagerInfo.Network.HasSecurityScheme(nodeId, SecuritySchemes.S2_AUTHENTICATED))
+                                                            schemesList.Add(SecuritySchemes.S2_AUTHENTICATED);
+                                                        if (SecurityManagerInfo.Network.HasSecurityScheme(nodeId, SecuritySchemes.S2_UNAUTHENTICATED))
+                                                            schemesList.Add(SecuritySchemes.S2_UNAUTHENTICATED);
+                                                        if (SecurityManagerInfo.Network.HasSecurityScheme(nodeId, SecuritySchemes.S0))
+                                                            schemesList.Add(SecuritySchemes.S0);
+                                                        byte grantedKeysByte = KEXSetConfirmResult.ConvertToNetworkKeyFlags(schemesList.ToArray());
+                                                        var entry = new COMMAND_CLASS_SECURITY_2_V2.NLS_NODE_LIST_REPORT.TVG1();
+                                                        entry.properties1.nodeIdMsb = (byte)((nodeId >> 8) & 0x0F);
+                                                        entry.properties1.nlsState = 1;
+                                                        entry.nodeIdLsb = (byte)(nodeId & 0xFF);
+                                                        entry.grantedKeys = grantedKeysByte;
+                                                        report.vg1.Add(entry);
+                                                    }
+                                                    report.properties1.nextNlsNodeIdMsb = (byte)((nextNodeId >> 8) & 0x0F);
+                                                    report.nextNlsNodeIdLsb = (byte)(nextNodeId & 0xFF);
+                                                    byte[] reportPayload = report;
+                                                    var sendNlsReportOp = new SendDataOperation(_network, srcNode, reportPayload, SecurityManagerInfo.TxOptions);
+                                                    sendNlsReportOp.SubstituteSettings.SetFlag(SubstituteFlags.UseSecurity);
+                                                    if (additionalAction != null)
+                                                        additionalAction = new ActionSerialGroup(sendNlsReportOp, additionalAction);
+                                                    else
+                                                        additionalAction = sendNlsReportOp;
                                                 }
                                                 bool hasMpanExtension = false;
                                                 if (extensions != null && extensions.EncryptedExtensionsList != null && extensions.EncryptedExtensionsList.Count > 0)
