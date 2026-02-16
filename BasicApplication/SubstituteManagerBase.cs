@@ -71,25 +71,28 @@ namespace ZWave.BasicApplication
             if (packet != null && packet.Data != null && packet.Data.Length > 1 &&
                 (packet.Data[1] == (byte)CommandTypes.CmdApplicationCommandHandler || packet.Data[1] == (byte)CommandTypes.CmdApplicationCommandHandler_Bridge))
             {
+                // Official Host API (Serial API version >= 10, per GetSerialApiInitData) uses CSWG layout:
+                // Security Key, Source TX Power, Source Noise Floor after source node id, then length and command. Legacy uses 0.
+                int achExtraFieldsLength = _network.SerialApiVersion >= 10 ? 3 : 0;
                 int srcIndex = 3;
-                lenIndex = 4;
+                lenIndex = 4 + achExtraFieldsLength; // [0]type, [1]cmd, [2]rxStatus, [3]sourceNodeId, [4..]extra, length
                 int destIndex = -1;
                 if (_network.IsNodeIdBaseTypeLR)
                 {
                     srcIndex = 4;
-                    lenIndex = 5;
+                    lenIndex = 5 + achExtraFieldsLength;
                 }
                 byte[] frameData = packet.Data;
                 if (frameData[1] == (byte)CommandTypes.CmdApplicationCommandHandler_Bridge)
                 {
                     destIndex = 3;
                     srcIndex = 4;
-                    lenIndex = 5;
+                    lenIndex = 5 + achExtraFieldsLength;
                     if (_network.IsNodeIdBaseTypeLR)
                     {
                         destIndex = 4;
                         srcIndex = 6;
-                        lenIndex = 7;
+                        lenIndex = 7 + achExtraFieldsLength;
                     }
                 }
                 if (frameData.Length > lenIndex && frameData[lenIndex] > 0 && frameData.Length > lenIndex + frameData[lenIndex])
