@@ -143,10 +143,10 @@ namespace ZWave.BasicApplication.Operations
         public SubstituteStatuses TxSubstituteStatus { get; set; }
 
         /// <summary>
-        /// Fills this result from the callback payload per Z-Wave Host API spec (CSWG),
-        /// with a fallback for older callback layouts that omit the Session identifier.
-        /// CSWG layout: [0]Z-Wave API Command ID, [1]Session identifier, [2]Tx Status, [3..]Tx Status Report.
-        /// Legacy layout: [0]Z-Wave API Command ID, [1]Tx Status, [2..]Tx Status Report.
+        /// Fills this result from the callback payload per Z-Wave Host API spec (CSWG).
+        /// CSWG controller_node_send_data_command: obsolete "Command Class" and "Command ID" removed;
+        /// layout is [0]Z-Wave API Command ID, [1]Session identifier, [2]Tx Status, [3..]Tx Status Report.
+        /// Legacy layout (omit Session): [0]Z-Wave API Command ID, [1]Tx Status, [2..]Tx Status Report.
         /// Tx Status Report: [0-1]Transmit Ticks, [2]Number of repeaters, [3]Ack RSSI, [4-7]RSSI Repeater 0-3,
         /// [8]ACK Channel No, [9]Tx Channel No, [10]Route Scheme, [11-14]Last Route Repeater 0-3, [15]beam/speed,
         /// [16]Routing Attempts, [17-18]Last failed link from/to, [19]Tx Power, [20]Noise Floor, [21-23]Destination Ack....
