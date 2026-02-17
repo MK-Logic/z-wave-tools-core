@@ -110,8 +110,6 @@ namespace ZWave.BasicApplication.Operations
 
             _sendEncData = new SendDataOperation(_network, TestNode ?? Node, null, TxOptions);
             _sendEncData.SubstituteSettings.SetFlag(SubstituteFlags.DenySecurity);
-            // Repeat (after Nonce Report with SOS) must run during exclusive ops (e.g. Neighbor Update).
-            _sendEncData.IsExclusive = false;
         }
 
         private void OnStart(StartActionUnit taskUnit)
