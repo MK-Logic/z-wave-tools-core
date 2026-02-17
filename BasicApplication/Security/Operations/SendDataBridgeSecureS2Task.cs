@@ -84,6 +84,8 @@ namespace ZWave.BasicApplication.Operations
             {
                 SubstituteSettings = new SubstituteSettings(SubstituteFlags.DenySecurity, 0)
             };
+            // Repeat (after Nonce Report with SOS) must run during exclusive ops (e.g. Neighbor Update).
+            _sendEncData.IsExclusive = false;
         }
 
         private void OnStart(StartActionUnit taskUnit)
