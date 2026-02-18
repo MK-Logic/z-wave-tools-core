@@ -10,6 +10,8 @@ namespace ZWave.BasicApplication.Operations
     /// <summary>
     /// HOST->ZW: REQ | 0x48 | nodeID | funcID
     /// ZW->HOST: REQ | 0x48 | funcID | bStatus
+    /// The controller may delay or omit the 0x48 Done/Failed callback while S2 or other traffic is active;
+    /// the timeout ensures the UI closes when the callback is not received.
     /// </summary>
     public class RequestNodeNeighborUpdateOperation : ApiOperation
     {
@@ -25,6 +27,8 @@ namespace ZWave.BasicApplication.Operations
             TimeoutMs = timeoutMs;
             if (TimeoutMs <= 0)
                 TimeoutMs = TIMEOUT;
+            // So that when 0x48 does arrive (e.g. after S2 traffic), this operation gets first chance to handle it.
+            IsFirstPriority = true;
         }
 
         private ApiMessage messageStart;
@@ -38,6 +42,14 @@ namespace ZWave.BasicApplication.Operations
             ActionUnits.Add(new DataReceivedUnit(handlerStarted, OnHandlerStarted));
             ActionUnits.Add(new DataReceivedUnit(handlerDone, OnHandlerDone));
             ActionUnits.Add(new DataReceivedUnit(handlerFailed, OnHandlerFailed));
+            StopActionUnit = new StopActionUnit(OnTimeout, 0);
+        }
+
+        private void OnTimeout(StopActionUnit ou)
+        {
+            SpecificResult.NeighborUpdateStatus = RequestNeighborUpdateStatuses.Failed;
+            "Neighbors Update 0x48: Timeout"._DLOG();
+            SetStateCompleted(ou);
         }
 
         protected override void CreateInstance()
