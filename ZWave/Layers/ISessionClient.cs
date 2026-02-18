@@ -1,6 +1,7 @@
 /// SPDX-License-Identifier: BSD-3-Clause
 /// SPDX-FileCopyrightText: Silicon Laboratories Inc. https://www.silabs.com
 using System;
+using System.Collections.Concurrent;
 using ZWave.Layers.Frame;
 using System.Collections.Generic;
 using ZWave.Enums;
@@ -10,6 +11,9 @@ namespace ZWave.Layers
 {
     public interface ISessionClient : IDisposable
     {
+        /// <summary>Currently running actions by action id. Used e.g. by NLS completion to find and complete
+        /// the matching SendDataOperation.</summary>
+        ConcurrentDictionary<int, ActionBase> RunningActions { get; }
         bool SuppressDebugOutput { get; set; }
         ushort SessionId { get; set; }
         bool IsHandleFrameEnabled { get; set; }

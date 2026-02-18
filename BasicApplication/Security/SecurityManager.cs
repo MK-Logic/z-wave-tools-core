@@ -917,10 +917,15 @@ namespace ZWave.BasicApplication
         /// Pass the returned operation to AddSubstituteManager(securityManager, nlsOperation) so the listener is started.
         /// </summary>
         /// <param name="executeAsync">Callback to run follow-up operations (e.g. SessionClient.ExecuteAsync).</param>
-        public RequestProtocolCcEncryptionOperation CreateRequestProtocolCcEncryptionOperation(Action<ActionBase> executeAsync)
+        /// <param name="onNlsSendCompleted">Optional. Called when Controller Node Send Protocol Data (0xAC) completes, so the host can
+        /// complete the matching SendDataOperation (chip does not send 0x13 transmit report for NLS path).
+        /// Signature: (destinationNodeId, payload, txStatus, txReport).</param>
+        public RequestProtocolCcEncryptionOperation CreateRequestProtocolCcEncryptionOperation(
+            Action<ActionBase> executeAsync,
+            Action<NodeTag, byte[], byte, SendDataResult> onNlsSendCompleted = null)
         {
             var op = new RequestProtocolCcEncryptionOperation { NetworkView = SecurityManagerInfo.Network };
-            op.ReceivedCallback = data => HandleProtocolCcEncryptionRequest(data, executeAsync);
+            op.ReceivedCallback = data => HandleProtocolCcEncryptionRequest(data, executeAsync, onNlsSendCompleted);
             return op;
         }
 
@@ -943,19 +948,23 @@ namespace ZWave.BasicApplication
         }
 
         /// <summary>
-        /// Handles a Request Protocol CC Encryption (0x6C) request from the module:
-        /// 1. Encrypts payload with S2,
-        /// 2. sends via Controller Node Send Protocol Data (0xAC),
-        /// 3. reports TX via Request Protocol CC Encryption (0x6C) callback.
-        /// On any error (no key, encryption failure, etc.) still sends a 0x6C callback with a failure status so the module is not left waiting.
+        /// Handles a Request Protocol CC Encryption (0x6C) request from the module.
+        /// The module may send 0x6C (e.g. when it intercepts Send Data (0x13) for protocol (0x01) frames to NLS nodes
+        /// and asks the host to provide S2-encrypted payload via 0xAC). We encrypt the payload with S2, send via
+        /// Controller Node Send Protocol Data (0xAC), and report TX via 0x6C callback.
+        /// On any error we still send a 0x6C callback with a failure status so the module is not left waiting.
         /// </summary>
-        private void HandleProtocolCcEncryptionRequest(RequestProtocolCcEncryptionData data, Action<ActionBase> executeAsync)
+        private void HandleProtocolCcEncryptionRequest(
+            RequestProtocolCcEncryptionData data,
+            Action<ActionBase> executeAsync,
+            Action<NodeTag, byte[], byte, SendDataResult> onNlsSendCompleted)
         {
             if (!IsActive)
             {
                 if (executeAsync != null)
                 {
                     SendRequestProtocolCcEncryptionCallback(data.SessionId, (byte)TransmitStatuses.CompleteFail, null, executeAsync);
+                    onNlsSendCompleted?.Invoke(data.DestinationNodeId, data.Payload, (byte)TransmitStatuses.CompleteFail, null);
                 }
                 return;
             }
@@ -972,6 +981,7 @@ namespace ZWave.BasicApplication
                 if (scheme == SecuritySchemes.NONE)
                 {
                     SendRequestProtocolCcEncryptionCallback(data.SessionId, (byte)TransmitStatuses.CompleteFail, null, executeAsync);
+                    onNlsSendCompleted?.Invoke(data.DestinationNodeId, data.Payload, (byte)TransmitStatuses.CompleteFail, null);
                     return;
                 }
                 SecurityManagerInfo.ActivateNetworkKeyS2ForNode(peerNodeId, scheme, _network.IsLongRange(dstNode) && _network.IsLongRangeEnabled(dstNode));
@@ -979,6 +989,7 @@ namespace ZWave.BasicApplication
             if (!SecurityManagerInfo.ScKeys.TryGetValue(peerNodeId, out SinglecastKey sckey))
             {
                 SendRequestProtocolCcEncryptionCallback(data.SessionId, (byte)TransmitStatuses.CompleteFail, null, executeAsync);
+                onNlsSendCompleted?.Invoke(data.DestinationNodeId, data.Payload, (byte)TransmitStatuses.CompleteFail, null);
                 return;
             }
             byte[] payloadToEncrypt = data.Payload;
@@ -1002,6 +1013,7 @@ namespace ZWave.BasicApplication
             if (encryptedMsg == null)
             {
                 SendRequestProtocolCcEncryptionCallback(data.SessionId, (byte)TransmitStatuses.CompleteFail, null, executeAsync);
+                onNlsSendCompleted?.Invoke(data.DestinationNodeId, data.Payload, (byte)TransmitStatuses.CompleteFail, null);
                 return;
             }
             void SendProtocolDataAttempt(int attempt)
@@ -1028,6 +1040,7 @@ namespace ZWave.BasicApplication
                         return;
                     }
                     SendRequestProtocolCcEncryptionCallback(data.SessionId, (byte)status, sendResult, executeAsync);
+                    onNlsSendCompleted?.Invoke(data.DestinationNodeId, data.Payload, (byte)status, sendResult);
                 };
                 executeAsync(sendOp);
             }
@@ -1037,6 +1050,20 @@ namespace ZWave.BasicApplication
         public override ActionBase SubstituteActionInternal(ApiOperation apiAction)
         {
             ActionBase ret = null;
+            var flags = apiAction.SubstituteSettings?.SubstituteFlags ?? SubstituteFlags.None;
+            var nodeId = apiAction is SendDataOperation _sdo
+                ? _sdo.DstNode.Id
+                : (apiAction is SendDataExOperation _sdxo ? _sdxo.DstNode.Id : 0);
+            var dataLen = apiAction is SendDataOperation _sd
+                ? (_sd.Data?.Length ?? 0)
+                : (apiAction is SendDataExOperation _sdx ? (_sdx.Data?.Length ?? 0) : 0);
+            var data0 = (apiAction is SendDataOperation _sd2 && _sd2.Data != null && _sd2.Data.Length > 0)
+                ? _sd2.Data[0]
+                : (apiAction is SendDataExOperation _sdx2 && _sdx2.Data != null && _sdx2.Data.Length > 0
+                    ? _sdx2.Data[0]
+                    : (byte)0);
+            ($"[Security Substitute] type={apiAction?.GetType().Name} nodeId={nodeId} dataLen={dataLen} data0=0x{data0:X2} "
+                + $"SubstituteFlags=0x{(int)flags:X}")._DLOG();
             if (apiAction is SendDataExOperation)
             {
                 SetWasRetransmittedOnS2NonceGet(apiAction);
@@ -1067,6 +1094,8 @@ namespace ZWave.BasicApplication
                 }
                 else
                 {
+                    if (apiAction.SubstituteSettings.HasFlag(SubstituteFlags.DenySecurity))
+                        $"[Security Substitute] SendDataExOperation: skipping S2 (DenySecurity) nodeId={((SendDataExOperation)apiAction).DstNode.Id}"._DLOG();
                     if (!apiAction.SubstituteSettings.HasFlag(SubstituteFlags.UseMulticast))
                     {
                         var sendDataExAction = (SendDataExOperation)apiAction;
@@ -1115,6 +1144,8 @@ namespace ZWave.BasicApplication
                 }
                 else
                 {
+                    if (apiAction.SubstituteSettings.HasFlag(SubstituteFlags.DenySecurity))
+                        $"[Security Substitute] SendDataOperation: skipping S2 (DenySecurity) nodeId={((SendDataOperation)apiAction).DstNode.Id}"._DLOG();
                     if (!apiAction.SubstituteSettings.HasFlag(SubstituteFlags.UseMulticast))
                     {
                         ret = apiAction;
