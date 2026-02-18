@@ -77,7 +77,7 @@ namespace ZWave.BasicApplication.Operations
         {
             SpecificResult.NeighborUpdateStatus = RequestNeighborUpdateStatuses.Failed;
             "Neighbors Update 0x48: Failed"._DLOG();
-            SetStateCompleted(ou);
+            SetStateFailed(ou);
         }
 
         public RequestNodeNeighborUpdateResult SpecificResult
