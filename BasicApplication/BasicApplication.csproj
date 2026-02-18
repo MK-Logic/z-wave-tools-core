@@ -94,6 +94,7 @@
     <Compile Include="Operations\GetLRChannelOperation.cs" />
     <Compile Include="Operations\InitiateShutdownOperation.cs" />
     <Compile Include="Operations\RequestNodeNeighborDiscoveryOperation.cs" />
+    <Compile Include="Operations\CompleteSendDataForNlsOperation.cs" />
     <Compile Include="Operations\RequestProtocolCcEncryptionOperation.cs" />
     <Compile Include="Operations\RequestProtocolCcEncryptionCallbackOperation.cs" />
     <Compile Include="Operations\ControllerNodeSendProtocolDataOperation.cs" />
