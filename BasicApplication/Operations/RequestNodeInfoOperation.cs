@@ -2,7 +2,6 @@
 /// SPDX-FileCopyrightText: Silicon Laboratories Inc. https://www.silabs.com
 using System;
 using System.Linq;
-using ZWave;
 using ZWave.BasicApplication.Enums;
 using ZWave.Enums;
 using Utils;
@@ -45,7 +44,7 @@ namespace ZWave.BasicApplication.Operations
 
         protected override void CreateWorkflow()
         {
-            ActionUnits.Add(new StartActionUnit(OnStart, _timeoutMs, messageRequest));
+            ActionUnits.Add(new StartActionUnit(null, _timeoutMs, messageRequest));
             //ActionUnits.Add(new DataReceivedUnit(handlerResponseTrue, null));
             ActionUnits.Add(new DataReceivedUnit(handlerResponseFalse, SetStateFailed));
             //ActionUnits.Add(new DataReceivedUnit(handlerNodeInfoReqDone, null));
@@ -91,39 +90,6 @@ namespace ZWave.BasicApplication.Operations
                 //handlerNodeInfoReqDone = new ApiHandler(FrameTypes.Request, CommandTypes.CmdApplicationControllerUpdate);
                 //handlerNodeInfoReqDone.AddConditions(new ByteIndex((byte)ControllerUpdateStatuses.NodeInfoReqDone), new ByteIndex(0), new ByteIndex((byte)Node.Id));
 
-            }
-        }
-
-        private void OnStart(StartActionUnit ou)
-        {
-            try
-            {
-                var nInfo = _network.GetNodeInfo(Node);
-                if (nInfo.IsEmpty)
-                    return;
-                var cmdClasses = _network.GetCommandClasses(Node);
-                if (cmdClasses == null || cmdClasses.Length == 0)
-                    return;
-                SpecificResult.Node = Node;
-                SpecificResult.Basic = nInfo.Basic;
-                SpecificResult.Generic = nInfo.Generic;
-                SpecificResult.Specific = nInfo.Specific;
-                SpecificResult.CommandClasses = cmdClasses;
-                try
-                {
-                    SpecificResult.SecureCommandClasses = _network.GetSecureCommandClasses(Node);
-                }
-                catch
-                {
-                    SpecificResult.SecureCommandClasses = null;
-                }
-                SpecificResult.NodeInfo = (byte[])nInfo;
-                "Request Node Info: completed from network cache for node {0}"._DLOG(Node.Id);
-                base.SetStateCompleted(ou);
-            }
-            catch
-            {
-                // Node not in network or no cached info; proceed with normal request
             }
         }
 

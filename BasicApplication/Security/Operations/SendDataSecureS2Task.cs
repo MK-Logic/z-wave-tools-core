@@ -5,7 +5,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
 using Utils;
-using ZWave.BasicApplication.Enums;
 using ZWave.BasicApplication.Security;
 using ZWave.CommandClasses;
 using ZWave.Enums;
@@ -38,8 +37,6 @@ namespace ZWave.BasicApplication.Operations
         private readonly SinglecastKey _sckey;
         private RequestDataOperation _requestNonce;
         private SendDataOperation _sendEncData;
-        private ApiHandler _handlerCommandComplete;
-        private ApiHandler _handlerCommandCompleteBridge;
         private InvariantPeerNodeId _peerNodeId;
         private readonly ISecurityTestSettingsService _securityTestSettingsService;
         public Action SubstituteCallback { get; set; }
@@ -64,16 +61,10 @@ namespace ZWave.BasicApplication.Operations
             _peerNodeId = new InvariantPeerNodeId(_securityManagerInfo.Network.NodeTag, Node);
             TxOptions = txOptions;
             _securityTestSettingsService = new SecurityTestSettingsService(_securityManagerInfo, false);
-            // So COMMAND_COMPLETE from the node is matched by this task before other actions (e.g. TransferProtocolCc, ListenData).
-            IsFirstPriority = true;
         }
 
         protected override void CreateWorkflow()
         {
-            // Complete when COMMAND_COMPLETE (0x01 0x07) is received from the node (e.g. NLS Find Nodes in Range response).
-            // Match both regular ACH (0x04) and Bridge (0xA8); NLS returns S2-encapsulated response as bridge.
-            ActionUnits.Add(new DataReceivedUnit(_handlerCommandComplete, OnCommandComplete));
-            ActionUnits.Add(new DataReceivedUnit(_handlerCommandCompleteBridge, OnCommandComplete));
             ActionUnits.Add(new StartActionUnit(OnStart, 0, _requestNonce));
             ActionUnits.Add(new ActionCompletedUnit(_requestNonce, OnNonceReport, _sendEncData));
             ActionUnits.Add(new ActionCompletedUnit(_sendEncData, OnSendEncData));
@@ -119,49 +110,6 @@ namespace ZWave.BasicApplication.Operations
 
             _sendEncData = new SendDataOperation(_network, TestNode ?? Node, null, TxOptions);
             _sendEncData.SubstituteSettings.SetFlag(SubstituteFlags.DenySecurity);
-
-            // Match ACH COMMAND_COMPLETE from the node (e.g. NLS Find Nodes in Range response)
-            _handlerCommandComplete = new ApiHandler(FrameTypes.Request, CommandTypes.CmdApplicationCommandHandler);
-            _handlerCommandComplete.AddConditions(
-                ByteIndex.AnyValue,
-                Node.Id > 0 && Node.Id < 255 ? new ByteIndex((byte)Node.Id) : ByteIndex.AnyValue,
-                ByteIndex.AnyValue,
-                new ByteIndex(ZWave.CommandClasses.ZWAVE_CMD_CLASS.ID),
-                new ByteIndex(ZWave.CommandClasses.ZWAVE_CMD_CLASS.COMMAND_COMPLETE.ID));
-            if (_network.IsNodeIdBaseTypeLR)
-            {
-                _handlerCommandComplete = new ApiHandler(FrameTypes.Request, CommandTypes.CmdApplicationCommandHandler);
-                _handlerCommandComplete.AddConditions(
-                    ByteIndex.AnyValue,
-                    Node.Id > 0 && Node.Id != 0xFF ? new ByteIndex((byte)(Node.Id >> 8)) : ByteIndex.AnyValue,
-                    Node.Id > 0 && Node.Id != 0xFF ? new ByteIndex((byte)Node.Id) : ByteIndex.AnyValue,
-                    ByteIndex.AnyValue,
-                    new ByteIndex(ZWave.CommandClasses.ZWAVE_CMD_CLASS.ID),
-                    new ByteIndex(ZWave.CommandClasses.ZWAVE_CMD_CLASS.COMMAND_COMPLETE.ID));
-            }
-
-            // Bridge (0xA8): NLS returns S2-encapsulated COMMAND_COMPLETE as bridge; decrypted frame keeps 0xA8 format.
-            _handlerCommandCompleteBridge = new ApiHandler(FrameTypes.Request, CommandTypes.CmdApplicationCommandHandler_Bridge);
-            _handlerCommandCompleteBridge.AddConditions(
-                ByteIndex.AnyValue,
-                ByteIndex.AnyValue,
-                Node.Id > 0 && Node.Id < 255 ? new ByteIndex((byte)Node.Id) : ByteIndex.AnyValue,
-                ByteIndex.AnyValue,
-                new ByteIndex(ZWave.CommandClasses.ZWAVE_CMD_CLASS.ID),
-                new ByteIndex(ZWave.CommandClasses.ZWAVE_CMD_CLASS.COMMAND_COMPLETE.ID));
-            if (_network.IsNodeIdBaseTypeLR)
-            {
-                _handlerCommandCompleteBridge = new ApiHandler(FrameTypes.Request, CommandTypes.CmdApplicationCommandHandler_Bridge);
-                _handlerCommandCompleteBridge.AddConditions(
-                    ByteIndex.AnyValue,
-                    ByteIndex.AnyValue,
-                    ByteIndex.AnyValue,
-                    Node.Id > 0 && Node.Id != 0xFF ? new ByteIndex((byte)(Node.Id >> 8)) : ByteIndex.AnyValue,
-                    Node.Id > 0 && Node.Id != 0xFF ? new ByteIndex((byte)Node.Id) : ByteIndex.AnyValue,
-                    ByteIndex.AnyValue,
-                    new ByteIndex(ZWave.CommandClasses.ZWAVE_CMD_CLASS.ID),
-                    new ByteIndex(ZWave.CommandClasses.ZWAVE_CMD_CLASS.COMMAND_COMPLETE.ID));
-            }
         }
 
         private void OnStart(StartActionUnit taskUnit)
@@ -237,14 +185,6 @@ namespace ZWave.BasicApplication.Operations
                 SpecificResult.TxSubstituteStatus = SubstituteStatuses.Failed;
                 SetStateFailed(ou);
             }
-        }
-
-        private void OnCommandComplete(DataReceivedUnit ou)
-        {
-            "S2 send: COMMAND_COMPLETE received from node {0}"._DLOG(Node.Id);
-            SpecificResult.TxSubstituteStatus = SubstituteStatuses.Done;
-            SpecificResult.TransmitStatus = TransmitStatuses.CompleteOk;
-            SetStateCompleted(ou);
         }
 
         private void OnSendEncData(ActionCompletedUnit ou)
