@@ -34,6 +34,14 @@ namespace ZWave.BasicApplication.Operations
             Data = encryptedData ?? Array.Empty<byte>();
             ProtocolMetadata = protocolMetadata ?? Array.Empty<byte>();
             SessionId = sessionId;
+
+            ($"NLS:{Environment.NewLine}" +
+                $"Controller Node Send Protocol Data (0xAC){Environment.NewLine}" +
+                $"│ Destination Node ID: {destinationNodeId}{Environment.NewLine}" +
+                $"│ Encrypted Data:      {encryptedData?.GetHex()}{Environment.NewLine}" +
+                $"│ Protocol Meta Data:  {protocolMetadata?.GetHex()}{Environment.NewLine}" +
+                $"│ Session ID:          {sessionId}{Environment.NewLine}" +
+                $"└─")._DLOG();
         }
 
         protected override void CreateInstance()

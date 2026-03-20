@@ -21,7 +21,8 @@ namespace ZWave.BasicApplication.Operations
 
         public SendDataOperation(NetworkViewPoint network, NodeTag node, byte[] data, TransmitOptions txOptions)
             : this(network, NodeTag.Empty, node, data, txOptions)
-        { }
+        {
+        }
 
         public SendDataOperation(NetworkViewPoint network, NodeTag srcNode, NodeTag dstNode, byte[] data, TransmitOptions txOptions)
             : base(CommandTypes.CmdZWaveSendData, CommandTypes.CmdZWaveSendDataAbort)
@@ -31,6 +32,13 @@ namespace ZWave.BasicApplication.Operations
             DstNode = dstNode;
             Data = data;
             TxOptions = txOptions;
+
+            ($"SEND:{Environment.NewLine}" +
+                $"Send Data (0x13){Environment.NewLine}" +
+                $"│ Source Node:      {srcNode.ToString()}{Environment.NewLine}" +
+                $"│ Destination Node: {dstNode.ToString()}{Environment.NewLine}" +
+                $"│ Data:             {data?.GetHex()}{Environment.NewLine}" +
+                $"└─")._DLOG();
         }
 
         private ApiMessage messageSendDataAbort;
