@@ -271,14 +271,14 @@ namespace ZWave.BasicApplication
                                                         decryptionKey = scheme == SecuritySchemes.S2_TEMP ? (byte)SecuritySchemes.NONE : (byte)scheme;
                                                     }
 
-                                                    ($"RECEIVED:{Environment.NewLine}" +
-                                                    $"S2-Encapsulated Protocol Command{Environment.NewLine}" +
-                                                    $"│ Source Node:      {srcNode.ToString()}{Environment.NewLine}" +
-                                                    $"│ Destination Node: {destNode.ToString()}{Environment.NewLine}" +
-                                                    $"│ Security Scheme:  {scheme}{Environment.NewLine}" +
-                                                    $"│ Data:             {data.GetHex()}{Environment.NewLine}" +
-                                                    $"└─[Transfer Protocol CC Operation]{Environment.NewLine}" +
-                                                    $"    Decryption Key: 0x{decryptionKey:X2}")._DLOG();
+                                                    ($"NLS:{Environment.NewLine}" +
+                                                        $"RECEIVED: S2-Encapsulated Protocol Command{Environment.NewLine}" +
+                                                        $"│ Source Node:      {srcNode.ToString()}{Environment.NewLine}" +
+                                                        $"│ Destination Node: {destNode.ToString()}{Environment.NewLine}" +
+                                                        $"│ Security Scheme:  {scheme}{Environment.NewLine}" +
+                                                        $"│ Data:             {data.GetHex()}{Environment.NewLine}" +
+                                                        $"│ Decryption Key:   0x{decryptionKey:X2}{Environment.NewLine}" +
+                                                        $"└─")._DLOG();
 
                                                     var transferOp = new TransferProtocolCcOperation(_network, srcNode, decryptionKey, data);
                                                     if (additionalAction != null)

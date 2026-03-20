@@ -42,6 +42,12 @@ namespace ZWave.BasicApplication.Operations
             CommandToSecureSend = data;
             Node = node;
             TxOptions = txOptions;
+
+            ($"SEND:{Environment.NewLine}" +
+                $"SendDataSecureTask{Environment.NewLine}" +
+                $"│ Destination Node: {node.ToString()}{Environment.NewLine}" +
+                $"│ Data:             {data?.GetHex()}{Environment.NewLine}" +
+                $"└─")._DLOG();
         }
 
         RequestDataOperation _requestNonce;

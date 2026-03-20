@@ -1,6 +1,7 @@
 /// SPDX-License-Identifier: BSD-3-Clause
 /// SPDX-FileCopyrightText: Z-Wave Alliance https://z-wavealliance.org
 using System;
+using Utils;
 using ZWave.BasicApplication.Enums;
 using ZWave.Devices;
 
@@ -28,6 +29,13 @@ namespace ZWave.BasicApplication.Operations
             SrcNode = srcNode;
             DecryptionKey = decryptionKey;
             Payload = payload ?? Array.Empty<byte>();
+
+            ($"NLS:{Environment.NewLine}" +
+                $"Transfer Protocol CC (0x69){Environment.NewLine}" +
+                $"│ Source Node ID: {srcNode}{Environment.NewLine}" +
+                $"│ Decryption Key: {decryptionKey}{Environment.NewLine}" +
+                $"│ Payload:        {payload?.GetHex()}{Environment.NewLine}" +
+                $"└─")._DLOG();
         }
 
         protected override byte[] CreateInputParameters()

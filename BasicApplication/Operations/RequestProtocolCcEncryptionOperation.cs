@@ -1,6 +1,7 @@
 /// SPDX-License-Identifier: BSD-3-Clause
 /// SPDX-FileCopyrightText: Z-Wave Alliance https://z-wavealliance.org
 using System;
+using Utils;
 using ZWave.BasicApplication.Enums;
 using ZWave.Devices;
 using ZWave.Enums;
@@ -98,6 +99,19 @@ namespace ZWave.BasicApplication.Operations
                 protocolMetadata,
                 useSupervision,
                 sessionId);
+
+            ($"NLS:{Environment.NewLine}" +
+                $"RECEIVED: Request Protocol CC Encryption (0x6C){Environment.NewLine}" +
+                $"│ Data Buffer:    {ou.DataFrame.Buffer.GetHex()}{Environment.NewLine}" +
+                $"└─[Request Protocol CC Encryption (0x6C)]{Environment.NewLine}" +
+                $"  │ Payload:             {payload.GetHex()}{Environment.NewLine}" +
+                $"  │ Destination Node ID: {destinationNodeId}{Environment.NewLine}" +
+                $"  │ Plain Payload:       {plainPayload.GetHex()}{Environment.NewLine}" +
+                $"  │ Protocol Meta Data:  {protocolMetadata.GetHex()}{Environment.NewLine}" +
+                $"  │ Use Supervision:     {useSupervision}{Environment.NewLine}" +
+                $"  │ Session ID:          {sessionId}{Environment.NewLine}" +
+                $"  └─")._DLOG();
+
             ReceivedCallback?.Invoke(data);
         }
 
