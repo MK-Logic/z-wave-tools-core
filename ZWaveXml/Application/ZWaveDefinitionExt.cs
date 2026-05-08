@@ -1,5 +1,6 @@
 /// SPDX-License-Identifier: BSD-3-Clause
-/// SPDX-FileCopyrightText: Silicon Laboratories Inc. https://www.silabs.com
+/// SPDX-FileCopyrightText: Silicon Laboratories Inc. <https://www.silabs.com>
+/// SPDX-FileCopyrightText: Z-Wave-Alliance <https://z-wavealliance.org>
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -683,6 +684,198 @@ namespace ZWave.Xml.Application
             }
             commandClasses = cmdClasses.Count > 0 ? cmdClasses.ToArray() : null;
             secureCommandClasses = secureCmdClasses.Count > 0 ? secureCmdClasses.ToArray() : null;
+        }
+
+        /// <summary>
+        /// Validate a command's payload length is matching a specific command class version according to the Z-Wave definition.
+        /// This can, for example, be used to verify a command is matching the supported version advertised by a device.
+        /// </summary>
+        public PayloadParseResult ValidatePayloadLength(byte[] payload, byte expectedCCVersion)
+        {
+            if (payload == null || payload.Length < 1)
+            {
+                return null;
+            }
+
+            byte cc = payload[0];
+            byte? cmd = payload.Length > 1 ? payload[1] : (byte?)null;
+
+            var result = new PayloadParseResult
+            {
+                Type = PayloadParseResultType.ParseFailed, // default/fallback
+                CommandClassId = cc,
+                CommandClassVersion = expectedCCVersion,
+                CommandId = cmd,
+                OriginalPayload = payload,
+                NormalizedPayload = null
+            };
+
+            NormalizeResult normalizeResult = NormalizeWithZWaveDefinition(payload, expectedCCVersion);
+
+            if (normalizeResult)
+            {
+                byte[] normalizedPayload = normalizeResult.NormalizedPayload;
+                result.NormalizedPayload = normalizedPayload;
+
+                if(normalizedPayload == null)
+                {
+                    result.Type = PayloadParseResultType.ParseFailed;
+                }
+                else
+                {
+                    result.Type = (normalizedPayload.Length != payload.Length)
+                        ? PayloadParseResultType.LengthMismatch
+                        : PayloadParseResultType.Success;
+                }
+            }
+
+            return result;
+        }
+
+        private NormalizeResult NormalizeWithZWaveDefinition(byte[] payload, byte expectedCCVersion)
+        {
+            var result = new NormalizeResult
+            {
+                Success = false,
+                NormalizedPayload = null
+            };
+
+            try
+            {
+                CommandClassValue[] values = null;
+                ParseApplicationObject(payload, out values);
+
+                if (values == null || values.Length == 0)
+                {
+                    return result;
+                }
+
+                byte cc = payload[0];
+                byte? cmd = payload.Length > 1 ? payload[1] : (byte?)null;
+                List<CommandClassValue> candidates = values
+                    .Where(v =>
+                        v?.CommandClassDefinition != null &&
+                        v.CommandValue?.CommandDefinition != null &&
+                        v.CommandClassDefinition.KeyId == cc &&
+                        (cmd == null || v.CommandValue.CommandDefinition.KeyId == cmd))
+                    .ToList();
+
+                if (candidates.Count == 0)
+                {
+                    return result;
+                }
+                
+                // strict on known version
+                if (candidates.FirstOrDefault(v => v.CommandClassDefinition.Version == expectedCCVersion) is CommandClassValue candidate)
+                {
+                    var paramValues = candidate.CommandValue.ParamValues?.ToList() ?? new List<ParamValue>();
+                    var normalized = FillCommand(
+                        candidate.CommandClassDefinition,
+                        candidate.CommandValue.CommandDefinition,
+                        paramValues);
+
+                    if (normalized == null || normalized.Length < 1)
+                    {
+                        return result;
+                    }
+
+                    result.Success = true;
+                    result.NormalizedPayload = normalized;
+
+                    return result;
+                }
+
+                return result;
+            }
+            catch
+            {
+                return result;
+            }
+        }
+
+        private sealed class NormalizeResult
+        {
+            public bool Success { get; set; }
+            public byte[] NormalizedPayload { get; set; }
+
+            public static implicit operator bool(NormalizeResult val)
+            {
+                return val.Success;
+            }
+        }
+
+        private static void FillCommandInner(List<ParamValue> parameters, ref List<byte> data)
+        {
+            if (parameters != null && parameters.Count > 0)
+            {
+                byte structByte = 0;
+                byte structByteBitCounter = 0;
+                foreach (ParamValue var in parameters)
+                {
+
+                    if (var.ParamDefinition.Bits > 0 && var.ParamDefinition.Bits < 8 && var.ByteValueList.Count > 0)
+                    {
+                        byte tt = (byte)(var.ByteValueList[0] << structByteBitCounter);
+                        structByteBitCounter += var.ParamDefinition.Bits;
+                        structByte += tt;
+                    }
+                    else
+                    {
+                        data.AddRange(var.ByteValueList);
+                    }
+
+                    if (structByteBitCounter == 8)
+                    {
+                        data.Add(structByte);
+                        structByte = 0;
+                        structByteBitCounter = 0;
+                    }
+                    else if (structByteBitCounter > 8)
+                    {
+                        throw new ApplicationException("Invalid payload");
+                    }
+                }
+            }
+        }
+
+        public static byte[] FillCommand(CommandClass cmdClass, Command cmd, List<ParamValue> parameters)
+        {
+            List<byte> data = new List<byte>();
+            FillCommandInner(parameters, ref data);
+            return FillCommand(cmdClass.KeyId, cmd.KeyId, data.ToArray());
+        }
+
+        public static byte[] FillCommand(byte cmdClass, byte command, byte[] data)
+        {
+            List<byte> ret = new List<byte>();
+            ret.Add(cmdClass);
+            ret.Add(command);
+            if (data != null && data.Length > 0)
+            {
+                ret.AddRange(data);
+            }
+            return ret.ToArray();
+        }
+
+        public sealed class PayloadParseResult
+        {
+            public PayloadParseResultType Type { get; set; }
+            public byte CommandClassId { get; set; }
+            public byte CommandClassVersion { get; set; }
+            /// <summary>
+            /// Command ID is optional because, for example, the classic NOP payload is one byte only
+            /// (i.e., CC ID 0x00) with no Command ID. In this case this field is null.
+            /// </summary>
+            public byte? CommandId { get; set; }
+            public byte[] OriginalPayload { get; set; }
+            public byte[] NormalizedPayload { get; set; }
+        }
+
+        public enum PayloadParseResultType
+        {
+            Success,
+            LengthMismatch,
+            ParseFailed
         }
     }
 }
