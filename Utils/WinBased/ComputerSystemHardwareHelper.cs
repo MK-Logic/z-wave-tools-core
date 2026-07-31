@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO.Ports;
 using System.Linq;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
@@ -72,6 +73,11 @@ namespace Utils
 
         public static List<Tuple<string, string>> GetGammaSourceAndSerial()
         {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return new List<Tuple<string, string>>();
+            }
+
             var vidPids = new List<string>()
             {
                 @"VID_1366&PID_0105",   // SEGGER legacy driver "JLink CDC UART Port"
@@ -107,7 +113,7 @@ namespace Utils
                                             lastId = id;
                                         }
                                     }
-                                    else
+                                    else if (!string.IsNullOrEmpty(lastId) && tmp.ContainsKey(lastId))
                                     {
                                         tmp[lastId].Add(id);
                                     }
@@ -132,32 +138,44 @@ namespace Utils
                 foreach (ManagementObject queryObj in searcher.Get())
                 {
                     var deviceId = queryObj.GetPropertyValue("DeviceID") as string;
-                    if (deviceId != null)
+                    if (deviceId == null)
                     {
-                        foreach (string vidPid in vidPids)
-                        {
-                            if (deviceId.Contains(vidPid))
-                            {
-                                var name = queryObj.GetPropertyValue("Name") as string;
-                                if (name != null)
-                                {
-                                    var port = name.Split('(', ')').FirstOrDefault(x => x.StartsWith("COM"));
-                                    if (port != null)
-                                    {
-                                        foreach (var record in tmp)
-                                        {
-                                            foreach (var item in record.Value)
-                                            {
-                                                if (deviceId.Contains(item))
-                                                {
-                                                    ret.Add(new Tuple<string, string>(port, record.Key));
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                        continue;
+                    }
 
+                    if (!vidPids.Any(vidPid => deviceId.Contains(vidPid)))
+                    {
+                        continue;
+                    }
+
+                    var name = queryObj.GetPropertyValue("Name") as string;
+                    if (name == null)
+                    {
+                        continue;
+                    }
+
+                    var port = name.Split('(', ')').FirstOrDefault(x => x.StartsWith("COM"));
+                    if (port == null)
+                    {
+                        continue;
+                    }
+
+                    foreach (var record in tmp)
+                    {
+                        bool matched = false;
+                        foreach (var item in record.Value)
+                        {
+                            if (deviceId.Contains(item))
+                            {
+                                ret.Add(new Tuple<string, string>(port, record.Key));
+                                matched = true;
+                                break;
+                            }
+                        }
+
+                        if (!matched && deviceId.IndexOf(record.Key, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            ret.Add(new Tuple<string, string>(port, record.Key));
                         }
                     }
                 }
