@@ -7,7 +7,6 @@ using System.Diagnostics;
 using System.IO.Ports;
 using System.Linq;
 using System.Management;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.Win32;
 
@@ -73,11 +72,6 @@ namespace Utils
 
         public static List<Tuple<string, string>> GetGammaSourceAndSerial()
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return new List<Tuple<string, string>>();
-            }
-
             var vidPids = new List<string>()
             {
                 @"VID_1366&PID_0105",   // SEGGER legacy driver "JLink CDC UART Port"
@@ -110,8 +104,8 @@ namespace Utils
                                         if (!tmp.ContainsKey(id))
                                         {
                                             tmp.Add(id, new List<string>());
-                                            lastId = id;
                                         }
+                                        lastId = id; // always update so subsequent &MI_* children attach to this parent
                                     }
                                     else if (!string.IsNullOrEmpty(lastId) && tmp.ContainsKey(lastId))
                                     {

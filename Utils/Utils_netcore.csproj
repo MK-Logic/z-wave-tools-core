@@ -7,11 +7,9 @@
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework)' != 'net48'">
     <!-- for .NET (Core) -->
-    <!-- WinBased is included so net10.0 consumers (e.g. EDE) can use ComputerSystemHardwareHelper.
-         Callers must only invoke WMI helpers on Windows (see OS guard in GetGammaSourceAndSerial). -->
+    <Compile Remove="WinBased\**" />
     <PackageReference Include="System.IO.Ports" Version="8.0.0" />
     <PackageReference Include="System.IO.Packaging" Version="10.0.2" />
-    <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
     <!-- for .NET Framework 4.8 -->
