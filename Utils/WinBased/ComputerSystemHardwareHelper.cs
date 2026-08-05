@@ -121,10 +121,16 @@ namespace Utils
                             }
                         }
                     }
-                    catch (Exception) { }
+                    catch (Exception ex)
+                    {
+                        "GetGammaSourceAndSerial USB pass Error: {0}"._DLOG(ex.Message);
+                    }
                 }
             }
-            catch (ManagementException) { }
+            catch (ManagementException ex)
+            {
+                "GetGammaSourceAndSerial USB WMI Error: {0}"._DLOG(ex.Message);
+            }
             finally
             {
                 searcher.Dispose();
@@ -160,6 +166,11 @@ namespace Utils
                         continue;
                     }
 
+                    // Instance id is the last '\'-separated segment of the DeviceID
+                    // (e.g. "000440244321" for WinUSB, or "6&2f1a3b4c&0&0000" for composite PID_0105).
+                    int lastSep = deviceId.LastIndexOf('\\');
+                    string instanceId = lastSep >= 0 ? deviceId.Substring(lastSep + 1) : deviceId;
+
                     foreach (var record in tmp)
                     {
                         bool matched = false;
@@ -173,14 +184,26 @@ namespace Utils
                             }
                         }
 
-                        if (!matched && deviceId.IndexOf(record.Key, StringComparison.OrdinalIgnoreCase) >= 0)
+                        // For WinUSB (PID_1024) there are often no child MI_* entries; match the
+                        // instance-id segment exactly (after TrimStart('0')) so sequential serials
+                        // that share a prefix cannot collide.
+                        if (!matched && string.Equals(instanceId.TrimStart('0'), record.Key, StringComparison.OrdinalIgnoreCase))
                         {
                             ret.Add(new Tuple<string, string>(port, record.Key));
+                            matched = true;
+                        }
+
+                        if (matched)
+                        {
+                            break;
                         }
                     }
                 }
             }
-            catch (ManagementException) { }
+            catch (ManagementException ex)
+            {
+                "GetGammaSourceAndSerial PnP WMI Error: {0}"._DLOG(ex.Message);
+            }
             finally
             {
                 searcher.Dispose();
