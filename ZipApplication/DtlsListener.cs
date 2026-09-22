@@ -107,9 +107,12 @@ namespace ZWave.ZipApplication
         public event Action<string, ushort> ClientConnected;
         public event Action<string, ushort> ClientClosed;
 
-        private ListenerDataReceivedDelegate _dataReceivedDelegate;
-        private ListenerClientConnectedDelegate _clientConnectedDelegate;
-        private ListenerClientClosedDelegate _clientClosedDelegate;
+        // Created once and kept for the lifetime of this object: the native listener calls these
+        // from its own thread right up to the end of DtlsListenerStop, and a delegate that has
+        // been garbage collected leaves it with a dangling function pointer (see DtlsClient).
+        private readonly ListenerDataReceivedDelegate _dataReceivedDelegate;
+        private readonly ListenerClientConnectedDelegate _clientConnectedDelegate;
+        private readonly ListenerClientClosedDelegate _clientClosedDelegate;
 
         private UIntPtr _id;
 
@@ -119,23 +122,21 @@ namespace ZWave.ZipApplication
             get { return _listening; }
         }
 
+        public DtlsListener()
+        {
+            _dataReceivedDelegate = new ListenerDataReceivedDelegate(OnDataReceived);
+            _clientConnectedDelegate = new ListenerClientConnectedDelegate(OnClientConnected);
+            _clientClosedDelegate = new ListenerClientClosedDelegate(OnClientClosed);
+        }
+
         public int Start(string psk, string localAddress, ushort portNo)
         {
             if (_listening)
             {
                 return -1;
             }
-            _dataReceivedDelegate = new ListenerDataReceivedDelegate(OnDataReceived);
-            _clientConnectedDelegate = new ListenerClientConnectedDelegate(OnClientConnected);
-            _clientClosedDelegate = new ListenerClientClosedDelegate(OnClientClosed);
             _id = DtlsListenerStart(psk, localAddress, portNo, _dataReceivedDelegate, _clientConnectedDelegate, _clientClosedDelegate);
             _listening = _id != UIntPtr.Zero;
-            if (!_listening)
-            {
-                _dataReceivedDelegate = null;
-                _clientConnectedDelegate = null;
-                _clientClosedDelegate = null;
-            }
             return _listening ? 0 : -1;
         }
 
@@ -149,10 +150,9 @@ namespace ZWave.ZipApplication
             if (_listening)
             {
                 _listening = false;
-                DtlsListenerStop(_id);
-                _dataReceivedDelegate = null;
-                _clientConnectedDelegate = null;
-                _clientClosedDelegate = null;
+                var id = _id;
+                _id = UIntPtr.Zero;
+                DtlsListenerStop(id);
             }
         }
 

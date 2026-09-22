@@ -38,3 +38,4 @@ using System.Runtime.InteropServices;
 //[assembly: AssemblyFileVersion("1.06")]
 
 [assembly: InternalsVisibleTo("ZipTransportIntegrationTests")]
+[assembly: InternalsVisibleTo("ZWaveTests")]
