@@ -150,8 +150,13 @@ namespace ZWave.ZipApplication
         public event Action<IDtlsClient> Connected;
         public event Action<IDtlsClient> Closed;
 
-        private ClientConnectedDelegate _clientConnectedDelegate;
-        private ClientClosedDelegate _clientClosedDelegate;
+        // The native library keeps the function pointers of these delegates for as long as the
+        // connection exists and calls them from its own thread. A delegate that managed code no
+        // longer references can be garbage collected, and a native call through its function
+        // pointer then lands in freed memory and takes the whole process down. The delegates are
+        // therefore created once and kept for the lifetime of this object, never replaced or cleared.
+        private readonly ClientConnectedDelegate _clientConnectedDelegate;
+        private readonly ClientClosedDelegate _clientClosedDelegate;
 
         public Tuple<string, ushort>  LocalEndpoint { get; private set; }
 
@@ -161,6 +166,12 @@ namespace ZWave.ZipApplication
         public bool IsConnected
         {
             get { return _isConnected; }
+        }
+
+        public DtlsClient()
+        {
+            _clientConnectedDelegate = new ClientConnectedDelegate(ClientConnected);
+            _clientClosedDelegate = new ClientClosedDelegate(ClientClosed);
         }
 
         public bool Connect(string psk, string address, ushort port)
@@ -175,42 +186,35 @@ namespace ZWave.ZipApplication
 
         private bool ConnectInternal(string psk, string localAddress, ushort localPort, string destAddress, ushort destPortNo)
         {
-            _clientConnectedDelegate = new ClientConnectedDelegate(ClientConnected);
-            _clientClosedDelegate = new ClientClosedDelegate(ClientClosed);
             _id = (!string.IsNullOrEmpty(localAddress) && localPort > 0) ?
                 DtlsClientConnectFrom(psk, localAddress, localPort, destAddress, destPortNo, _clientConnectedDelegate, _clientClosedDelegate) :
                 DtlsClientConnect(psk, destAddress, destPortNo, _clientConnectedDelegate, _clientClosedDelegate);
-            if (_id == UIntPtr.Zero)
-            {
-                _clientClosedDelegate = null;
-                _clientConnectedDelegate = null;
-            }
             return _id != UIntPtr.Zero;
         }
 
         public void Close()
         {
-            if (_isConnected)
+            // The handle is released exactly once. Callers commonly close twice (an explicit
+            // Close() followed by one from a finally block), and the Closed callback raised by
+            // the native close can itself call back into Close(); both must be no-ops.
+            if (!_isConnected || _id == UIntPtr.Zero)
             {
-                try
-                {
-                    DtlsClientClose(_id);
-                }
-                catch
-                {
-                    Console.WriteLine("DTLS pointer already closed");
-                }
+                return;
             }
+            var id = _id;
+            _id = UIntPtr.Zero;
+            _isConnected = false;
+            DtlsClientClose(id);
         }
 
         public int Send(byte[] data)
         {
-            return DtlsClientSend(_id, data, (uint)data.Length);
+            return _id != UIntPtr.Zero ? DtlsClientSend(_id, data, (uint)data.Length) : -1;
         }
 
         public int Receive(byte[] data)
         {
-            return DtlsClientReceive(_id, data, (uint)data.Length);
+            return _id != UIntPtr.Zero ? DtlsClientReceive(_id, data, (uint)data.Length) : -1;
         }
 
         #endregion
@@ -224,8 +228,6 @@ namespace ZWave.ZipApplication
 
         private void ClientClosed(string address, ushort portNo)
         {
-            _clientConnectedDelegate = null;
-            _clientClosedDelegate = null;
             _isConnected = false;
             Closed?.Invoke(this);
         }

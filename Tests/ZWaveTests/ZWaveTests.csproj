@@ -66,6 +66,7 @@
     <Compile Include="StorageAttachmentTests.cs" />
     <Compile Include="DefineSetHeaderTests.cs" />
     <Compile Include="DefineSetNamingTests.cs" />
+    <Compile Include="DtlsInteropTests.cs" />
     <Compile Include="StorageHeaderTests.cs" />
     <Compile Include="TimeoutManagerTests.cs" />
     <Compile Include="TransportClientBaseTests.cs" />
@@ -78,6 +79,10 @@
     <ProjectReference Include="..\..\ZWave\ZWave.csproj">
       <Project>{B214D482-57EB-42BE-AEC7-D64850F56514}</Project>
       <Name>ZWave</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\ZipApplication\ZipApplication.csproj">
+      <Project>{8ACFB772-98F3-48FE-85AE-3F06DA2EA60B}</Project>
+      <Name>ZipApplication</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\ZWaveXml\ZWaveXml.csproj">
       <Project>{FEB030F9-A44A-4C72-9C28-C8FA186995FB}</Project>

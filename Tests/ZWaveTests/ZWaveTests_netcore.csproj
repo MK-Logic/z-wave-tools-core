@@ -12,6 +12,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\Utils\Utils_netcore.csproj" />
 		<ProjectReference Include="..\..\ZWave\ZWave_netcore.csproj" />
+		<ProjectReference Include="..\..\ZipApplication\ZipApplication_netcore.csproj" />
 		<ProjectReference Include="..\..\ZWaveXml\ZWaveXml_netcore.csproj" />
 	</ItemGroup>
 	<ItemGroup>
@@ -23,5 +24,27 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
+	</ItemGroup>
+	<!--
+		DtlsClient/DtlsListener P/Invoke "ziptrans32"/"ziptrans64", picked at runtime from
+		Environment.Is64BitProcess and resolved by the loader to .dll/.so/.dylib. The
+		ZipApplication project only copies these for RID-specific builds, so the test host
+		needs its own copy of the native library for the platform it is built on.
+	-->
+	<PropertyGroup>
+		<ZipTransportBlobsDir>$(MSBuildThisFileDirectory)../../z-wave-blobs/z-wave-tools-core/ZipTransport/</ZipTransportBlobsDir>
+	</PropertyGroup>
+	<ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+		<Content Include="$(ZipTransportBlobsDir)win/ziptrans64.dll" Link="ziptrans64.dll" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="$(ZipTransportBlobsDir)win/ziptrans32.dll" Link="ziptrans32.dll" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+	<ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux')) And !$(NETCoreSdkRuntimeIdentifier.StartsWith('linux-arm'))">
+		<Content Include="$(ZipTransportBlobsDir)linux/libziptrans64.so" Link="libziptrans64.so" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+	<ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux')) And $(NETCoreSdkRuntimeIdentifier.StartsWith('linux-arm'))">
+		<Content Include="$(ZipTransportBlobsDir)arm/libziptrans32.so" Link="libziptrans32.so" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+	<ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+		<Content Include="$(ZipTransportBlobsDir)osx/libziptrans64.dylib" Link="libziptrans64.dylib" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 </Project>
