@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Applies to every project below this directory, also when it is built as part of a consuming solution (ZATS, CTT, ...). -->
+<Project>
+  <PropertyGroup>
+    <!-- NuGet audits direct and transitive packages against the GitHub Advisory Database on every restore and reports
+         findings as warnings NU1901 (low) to NU1904 (critical). The build does not fail on them; the separate nuget-audit
+         job of the CI does. -->
+    <NuGetAuditMode>all</NuGetAuditMode>
+  </PropertyGroup>
+</Project>
