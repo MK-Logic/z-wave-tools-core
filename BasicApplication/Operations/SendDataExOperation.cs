@@ -13,6 +13,10 @@ namespace ZWave.BasicApplication.Operations
         public NodeTag DstNode { get; set; }
         internal NodeTag SrcNode { get; set; }
         public byte[] Data { get; set; }
+        /// <summary>
+        /// S2 message extensions to add when the SecurityManager encrypts the frame.
+        /// </summary>
+        public object Extensions { get; set; }
         internal TransmitOptions TxOptions { get; private set; }
         internal TransmitOptions2 TxOptions2 { get; private set; }
         internal TransmitSecurityOptions TxSecOptions { get; private set; }

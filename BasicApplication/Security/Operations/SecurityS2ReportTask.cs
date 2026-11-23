@@ -124,6 +124,15 @@ namespace ZWave.BasicApplication.Operations
                                                 dataToSend = rrec.Data;
                                                 scheme = rrec.SecurityScheme;
                                                 substituteSettings = rrec.SubstituteSettings;
+                                                if (rrec.MpanGroupId.HasValue)
+                                                {
+                                                    // Resend a lost MPAN with the current MPAN state of its group.
+                                                    var mpanNodeGroupId = new NodeGroupId(destNode, rrec.MpanGroupId.Value);
+                                                    if (_mpanTable.CheckMpanExists(mpanNodeGroupId))
+                                                    {
+                                                        extensions = AddMpanExtension(extensions, mpanNodeGroupId);
+                                                    }
+                                                }
                                                 rrec.Counter--;
                                             }
                                             else
@@ -143,13 +152,12 @@ namespace ZWave.BasicApplication.Operations
                                     {
                                         var groupId = _securityS2CryptoProvider.LastSentMulticastGroupId;
 
-                                        extensions = new Extensions();
                                         var nodeGroupId = new NodeGroupId(destNode, groupId);
                                         if (!_mpanTable.CheckMpanExists(nodeGroupId))
                                         {
                                             _mpanTable.AddOrReplace(nodeGroupId, 0x55, null, _securityS2CryptoProvider.GetRandomData());
                                         }
-                                        extensions.AddMpanExtension(_mpanTable.GetContainer(nodeGroupId).MpanState, groupId);
+                                        extensions = AddMpanExtension(extensions, nodeGroupId);
                                     }
                                 }
                             }
@@ -213,7 +221,11 @@ namespace ZWave.BasicApplication.Operations
                             ISendDataAction sendData = null;
                             if (SecuritySchemeSet.ALLS2.Contains(scheme))
                             {
-                                sendData = new SendDataExOperation(_network, ReceivedAchData.DstNode, ReceivedAchData.SrcNode, dataToSend, _securityManagerInfo.TxOptions, scheme);
+                                // A resend on SOS keeps its Security Scheme, so the MPAN extension goes with the SendDataExOperation.
+                                sendData = new SendDataExOperation(_network, ReceivedAchData.DstNode, ReceivedAchData.SrcNode, dataToSend, _securityManagerInfo.TxOptions, scheme)
+                                {
+                                    Extensions = extensions
+                                };
                             }
                             else
                             {
@@ -286,6 +298,21 @@ namespace ZWave.BasicApplication.Operations
                         _securityManagerInfo.IsActive);
                 }
             }
+        }
+
+        /// <summary>
+        /// Adds the MPAN extension of the group with its current MPAN state, unless the extensions already carry it.
+        /// </summary>
+        private Extensions AddMpanExtension(Extensions extensions, NodeGroupId nodeGroupId)
+        {
+            var ret = extensions ?? new Extensions();
+            bool hasGroup = ret.EncryptedExtensionsList.Any(x => x.properties1.type == (byte)ExtensionTypes.Mpan &&
+                x.extension != null && x.extension.Count > 0 && x.extension[0] == nodeGroupId.GroupId);
+            if (!hasGroup)
+            {
+                ret.AddMpanExtension(_mpanTable.GetContainer(nodeGroupId).MpanState, nodeGroupId.GroupId);
+            }
+            return ret;
         }
 
         private bool ValidateS2MessageExtensions(byte[] command)

@@ -412,9 +412,12 @@ namespace ZWave.Security
                 iv,
                 reserved,
                 ext);
-            if (plainData != null && encryptedData != null)
+            // A frame that carries only the MPAN extension has no command, but it must be resent on SOS as well.
+            // Only the group is kept: the extension is built again from the current MPAN state on resend.
+            byte? mpanGroupId = GetMpanGroupId(ext);
+            if (encryptedData != null && (plainData != null || mpanGroupId != null))
             {
-                SaveDataForRetransmission(peerNodeId, plainData, substituteSettings, sckey.SecurityScheme);
+                SaveDataForRetransmission(peerNodeId, plainData, mpanGroupId, substituteSettings, sckey.SecurityScheme);
             }
             return encryptedData;
         }
@@ -739,8 +742,15 @@ namespace ZWave.Security
             return senderNonce;
         }
 
-        protected virtual void SaveDataForRetransmission(InvariantPeerNodeId peerNodeId, byte[] plainData, SubstituteSettings substituteSettings, SecuritySchemes scheme)
+        protected virtual void SaveDataForRetransmission(InvariantPeerNodeId peerNodeId, byte[] plainData, byte? mpanGroupId, SubstituteSettings substituteSettings, SecuritySchemes scheme)
         {
+        }
+
+        private static byte? GetMpanGroupId(Extensions extensions)
+        {
+            var mpanExtension = extensions?.EncryptedExtensionsList?.FirstOrDefault(x =>
+                x.properties1.type == (byte)ExtensionTypes.Mpan && x.extension != null && x.extension.Count > 0);
+            return mpanExtension?.extension[0];
         }
     }
 
