@@ -41,6 +41,8 @@ namespace ZWave.Layers.Session
             SubstituteIncomingFlags.Crc16Encap,
             SubstituteIncomingFlags.Security,
             SubstituteIncomingFlags.TransportService,
+            // Outermost layer: applied last to outgoing frames, removed first from incoming frames.
+            SubstituteIncomingFlags.WakeOnCriticalMessage,
         };
 
         private ConcurrentDictionary<SubstituteIncomingFlags, ISubstituteManager> _substituteManagersDictionary = new ConcurrentDictionary<SubstituteIncomingFlags, ISubstituteManager>();

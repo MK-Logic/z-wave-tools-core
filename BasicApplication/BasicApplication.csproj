@@ -133,6 +133,7 @@
     <Compile Include="Security\Operations\InclusionControllerSecureSupport.cs" />
     <Compile Include="Operations\TestInterfaceSendDataOperation.cs" />
     <Compile Include="Crc16Encap\Crc16EncapManager.cs" />
+    <Compile Include="WakeOnCriticalMessage\WakeOnCriticalMessageManager.cs" />
     <Compile Include="Enums\RequestedKeys.cs" />
     <Compile Include="Enums\FirmwareUpdateNvmFunctionality.cs" />
     <Compile Include="Enums\NvmBackupRestoreStatuses.cs" />

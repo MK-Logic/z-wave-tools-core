@@ -27,6 +27,11 @@ namespace ZWave.Enums
         zReserved42 = 0x00020000,
         zReserved44 = 0x00040000,
         zReserved48 = 0x00080000,
+        /// <summary>
+        /// Wraps the frame in a Wake On Critical Message Notify Command (outermost layer).
+        /// Not supported with a security scheme on End Device libraries: the action fails without sending anything.
+        /// </summary>
+        UseWakeOnCriticalMessage = 0x00100000,
     }
 
     [Flags]
@@ -42,5 +47,6 @@ namespace ZWave.Enums
         SecurityFailed = 0x00000040,
         MultiChannel = 0x00000080,
         Settings = 0x00000100,
+        WakeOnCriticalMessage = 0x00000200,
     }
 }
