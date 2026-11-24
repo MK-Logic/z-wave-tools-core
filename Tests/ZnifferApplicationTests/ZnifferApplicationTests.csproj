@@ -43,6 +43,7 @@
     <Compile Include="PtiFrameClientTests.cs" />
     <Compile Include="PtiFrameParserTests.cs" />
     <Compile Include="S2DecodingTest.cs" />
+    <Compile Include="WakeOnCriticalMessageParserTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Utils\Utils.csproj">
