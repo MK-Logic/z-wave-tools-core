@@ -7,6 +7,10 @@ namespace ZWave.BasicApplication.Security
     public class RetransmissionRecord
     {
         public byte[] Data { get; set; }
+        /// <summary>
+        /// Group of the MPAN extension that the frame carried, or null. The extension is built again on resend.
+        /// </summary>
+        public byte? MpanGroupId { get; set; }
         public byte Counter { get; set; }
         public SubstituteSettings SubstituteSettings { get; set; }
         public SecuritySchemes SecurityScheme { get; set; }

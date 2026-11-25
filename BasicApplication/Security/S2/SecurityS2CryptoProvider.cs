@@ -42,7 +42,7 @@ namespace ZWave.BasicApplication.Security
             return senderNonce;
         }
 
-        protected override void SaveDataForRetransmission(InvariantPeerNodeId peerNodeId, byte[] plainData, SubstituteSettings substituteSettings, SecuritySchemes scheme)
+        protected override void SaveDataForRetransmission(InvariantPeerNodeId peerNodeId, byte[] plainData, byte? mpanGroupId, SubstituteSettings substituteSettings, SecuritySchemes scheme)
         {
             /* Delete when counter:
              * 0 - item was retransmitted sucessfully (only one Nonce Report)
@@ -59,10 +59,11 @@ namespace ZWave.BasicApplication.Security
             }
 
             _securityManagerInfo.RetransmissionTableS2.AddOrUpdate(peerNodeId,
-                new RetransmissionRecord(plainData) { SubstituteSettings = substituteSettings, SecurityScheme = scheme, Counter = 2 },
+                new RetransmissionRecord(plainData) { MpanGroupId = mpanGroupId, SubstituteSettings = substituteSettings, SecurityScheme = scheme, Counter = 2 },
                 (x, y) =>
                 {
                     y.Data = plainData;
+                    y.MpanGroupId = mpanGroupId;
                     y.Counter--;
                     return y;
                 });

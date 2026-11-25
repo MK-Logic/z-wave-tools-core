@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: Silicon Laboratories Inc. <https://www.silabs.com>
 using NUnit.Framework;
 using System.Linq;
+using ZWave;
 using ZWave.Enums;
 using ZWave.BasicApplication.Operations;
 using System.Threading;
@@ -23,6 +24,7 @@ namespace BasicApplicationTests.Security
         private readonly byte[] fakeMpanState = new byte[] { 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00 };
 
         private const int MPAN_SYNC_TIMEOUT = 222;
+        private static readonly byte[] WRONG_SPAN = new byte[] { 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01 };
         #endregion
 
         private SecurityManagerInfo _smiFirst;
@@ -1122,6 +1124,78 @@ namespace BasicApplicationTests.Security
 
             var nonceReportResult = (COMMAND_CLASS_SECURITY_2.SECURITY_2_NONCE_REPORT)etNonceMosRes.Command;
             Assert.IsTrue(nonceReportResult.properties1.mos == 0x01);
+        }
+
+        [Test]
+        public void SendMpan_ReceiverCannotDecryptMpanFrame_MpanResentOnSos()
+        {
+            // Arrange.
+            _ctrlFirst.SessionClient.GetSubstituteManager(typeof(SupervisionManager))?.Suspend();
+            _ctrlSecond.SessionClient.GetSubstituteManager(typeof(SupervisionManager))?.Suspend();
+            var nodeGroupId = SyncMpan();
+            // The receiver loses the MPAN, as if it had never received it.
+            _smiSecond.MpanTable.RemoveRecord(nodeGroupId);
+            // The MPAN frame is the next frame the sender encrypts. It uses a wrong SPAN, so the receiver
+            // cannot decrypt it and answers with SOS, as after a collision with a frame from the receiver.
+            _smiFirst.SetTestSpanS2(WRONG_SPAN, 1);
+
+            // Act.
+            var etMpan = _ctrlSecond.ExpectData(NODE_ID_1, null, new[] { ExtensionTypes.Mpan }, EXPECT_TIMEOUT, null);
+            var mosNonceReport = new COMMAND_CLASS_SECURITY_2.SECURITY_2_NONCE_REPORT
+            {
+                sequenceNumber = 0xF0,
+                properties1 = new COMMAND_CLASS_SECURITY_2.SECURITY_2_NONCE_REPORT.Tproperties1 { mos = 1 }
+            };
+            _ctrlSecond.SendData(NODE_ID_1, mosNonceReport, TXO, new SubstituteSettings(SubstituteFlags.DenySecurity, 0));
+            var etMpanRes = etMpan.WaitCompletedSignal();
+
+            // Assert.
+            Assert.IsTrue(etMpanRes);
+            AssertMpanInSync(nodeGroupId);
+        }
+
+        [Test]
+        public void SendData_NonceReportWithSosAndMos_ResendCarriesMpan()
+        {
+            // Arrange.
+            _ctrlFirst.SessionClient.GetSubstituteManager(typeof(SupervisionManager))?.Suspend();
+            _ctrlSecond.SessionClient.GetSubstituteManager(typeof(SupervisionManager))?.Suspend();
+            var versionGetCmd = CreateDataAsVersionGet();
+            var nodeGroupId = SyncMpan();
+            // The receiver is out of sync for the group, so its SOS Nonce Report also carries MOS.
+            _smiSecond.MpanTable.GetContainer(nodeGroupId).SetMosState(true);
+            // The receiver cannot decrypt the next frame from the sender.
+            _smiFirst.SetTestSpanS2(WRONG_SPAN, 1);
+
+            // Act.
+            var etVersionGetWithMpan = _ctrlSecond.ExpectData(NODE_ID_1, versionGetCmd, new[] { ExtensionTypes.Mpan }, EXPECT_TIMEOUT, null);
+            _ctrlFirst.SendData(NODE_ID_2, versionGetCmd, TXO);
+            var etRes = etVersionGetWithMpan.WaitCompletedSignal();
+
+            // Assert.
+            Assert.IsTrue(etRes);
+            AssertMpanInSync(nodeGroupId);
+        }
+
+        /// <summary>
+        /// Syncs SPAN and MPAN between sender and receiver and returns the group of the sender.
+        /// </summary>
+        private NodeGroupId SyncMpan()
+        {
+            SyncSpan();
+            _ctrlFirst.SendDataMulti(new[] { NODE_ID_2 }, CreateDataAsVersionWakeUpNotify(), TXO);
+            Thread.Sleep(MPAN_SYNC_TIMEOUT);
+            var groupsOnSender = _smiFirst.MpanTable.SelectGroupIds(NODE_ID_1);
+            Assert.IsTrue(groupsOnSender.Length > 0);
+            return new NodeGroupId(NODE_ID_1, groupsOnSender[0]);
+        }
+
+        private void AssertMpanInSync(NodeGroupId nodeGroupId)
+        {
+            Assert.IsTrue(_smiSecond.MpanTable.CheckMpanExists(nodeGroupId));
+            Assert.IsFalse(_smiSecond.MpanTable.IsRecordInMOSState(nodeGroupId));
+            Assert.IsTrue(_smiSecond.MpanTable.GetContainer(nodeGroupId).MpanState
+                .SequenceEqual(_smiFirst.MpanTable.GetContainer(nodeGroupId).MpanState));
         }
 
         private void SyncSpan()

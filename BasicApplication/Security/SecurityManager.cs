@@ -820,6 +820,7 @@ namespace ZWave.BasicApplication
                             var sendAction = new SendDataBridgeOperation(_network, sendDataExAction.SrcNode, sendDataExAction.DstNode, sendDataExAction.Data, sendDataExAction.TxOptions);
                             sendAction.DataDelay = sendDataExAction.DataDelay;
                             sendAction.SubstituteSettings = sendDataExAction.SubstituteSettings;
+                            sendAction.Extensions = sendDataExAction.Extensions;
                             ret = SaSendDataBridge(sendAction, sendDataExAction.SecurityScheme);
                         }
                         else
@@ -827,6 +828,7 @@ namespace ZWave.BasicApplication
                             var sendAction = new SendDataOperation(_network, sendDataExAction.DstNode, sendDataExAction.Data, sendDataExAction.TxOptions);
                             sendAction.DataDelay = sendDataExAction.DataDelay;
                             sendAction.SubstituteSettings = sendDataExAction.SubstituteSettings;
+                            sendAction.Extensions = sendDataExAction.Extensions;
                             ret = SaSendData(sendAction, sendDataExAction.SecurityScheme);
                         }
                     }
