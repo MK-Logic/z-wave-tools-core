@@ -58,6 +58,7 @@ namespace ZWave.BasicApplication
                 Array.Copy(packet.Data, lenIndex + 1 + cmdData.Length, newFrameData, lenIndex + 1 + encapsulatedPayload.Length,
                     packet.Data.Length - lenIndex - 1 - cmdData.Length);
                 ret = CreateNewFrame(packet, newFrameData);
+                ret.WakeOnCriticalMessageSeverity = notify.properties1.severity;
             }
             return ret;
         }

@@ -25,6 +25,11 @@ namespace ZWave.Layers.Frame
         public DateTime SystemTimeStamp { get; private set; }
         public int CmdLength { get; private set; }
         public Extensions Extensions { get; set; }
+        /// <summary>
+        /// Severity of the Wake On Critical Message Notify Command this frame was decapsulated from,
+        /// or null if it was not received in a Notify Command.
+        /// </summary>
+        public byte? WakeOnCriticalMessageSeverity { get; set; }
         public byte SrcEndPoint { get; set; }
         public byte DstEndPoint { get; set; }
         public bool IsBitAdress { get; set; }

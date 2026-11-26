@@ -147,6 +147,7 @@ namespace ZWave.BasicApplication
             ret.SetBuffer(buffer, 0, buffer.Length);
             ret.SubstituteIncomingFlags = packet.SubstituteIncomingFlags | GetId();
             ret.Extensions = packet.Extensions;
+            ret.WakeOnCriticalMessageSeverity = packet.WakeOnCriticalMessageSeverity;
             return ret;
         }
 
@@ -156,6 +157,7 @@ namespace ZWave.BasicApplication
             byte[] buffer = DataFrame.CreateFrameBuffer(newFrameData);
             ret.SetBuffer(buffer, cmdLength);
             ret.SubstituteIncomingFlags = packet.SubstituteIncomingFlags | GetId();
+            ret.WakeOnCriticalMessageSeverity = packet.WakeOnCriticalMessageSeverity;
             return ret;
         }
 

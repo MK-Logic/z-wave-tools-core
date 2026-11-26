@@ -171,6 +171,7 @@ namespace ZWave.BasicApplication.Operations
             ReceivedAchData.TimeStamp = DateTime.Now;
             ReceivedAchData.CommandType = CommandTypes.CmdApplicationCommandHandler;
             ReceivedAchData.SubstituteIncomingFlags = ou.DataFrame.SubstituteIncomingFlags;
+            ReceivedAchData.WakeOnCriticalMessageSeverity = ou.DataFrame.WakeOnCriticalMessageSeverity;
             int cmdLength = ou.DataFrame.CmdLength;
             if (IsFillReceived)
             {
@@ -252,6 +253,7 @@ namespace ZWave.BasicApplication.Operations
             ReceivedAchData.TimeStamp = DateTime.Now;
             ReceivedAchData.CommandType = CommandTypes.CmdApplicationCommandHandlerPMode;
             ReceivedAchData.SubstituteIncomingFlags = ou.DataFrame.SubstituteIncomingFlags;
+            ReceivedAchData.WakeOnCriticalMessageSeverity = ou.DataFrame.WakeOnCriticalMessageSeverity;
             int cmdLength = ou.DataFrame.CmdLength;
             if (IsFillReceived)
             {
@@ -279,6 +281,7 @@ namespace ZWave.BasicApplication.Operations
             ReceivedAchData.TimeStamp = DateTime.Now;
             ReceivedAchData.CommandType = CommandTypes.CmdApplicationCommandHandler_Bridge;
             ReceivedAchData.SubstituteIncomingFlags = ou.DataFrame.SubstituteIncomingFlags;
+            ReceivedAchData.WakeOnCriticalMessageSeverity = ou.DataFrame.WakeOnCriticalMessageSeverity;
             int cmdLength = ou.DataFrame.CmdLength;
             if (IsFillReceived)
             {
@@ -423,5 +426,9 @@ namespace ZWave.BasicApplication.Operations
         public SubstituteIncomingFlags SubstituteIncomingFlags { get; set; }
         public DateTime TimeStamp { get; set; }
         public Extensions Extensions { get; set; }
+        /// <summary>
+        /// Severity of the Wake On Critical Message Notify Command the command was received in, or null.
+        /// </summary>
+        public byte? WakeOnCriticalMessageSeverity { get; set; }
     }
 }

@@ -99,6 +99,10 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
             Assert.AreEqual(2, _sentByFirst.Count);
             AssertNotifyAround(_sentByFirst[0], COMMAND_CLASS_SECURITY_2.SECURITY_2_NONCE_GET.ID);
             Assert.AreEqual(COMMAND_CLASS_SECURITY_2.ID, _sentByFirst[1][0]);
+            // The command itself is received in the S2 Message Encapsulation without Notify Command.
+            Assert.IsTrue(expectRes.SubstituteIncomingFlags.HasFlag(SubstituteIncomingFlags.Security));
+            Assert.IsFalse(expectRes.SubstituteIncomingFlags.HasFlag(SubstituteIncomingFlags.WakeOnCriticalMessage));
+            Assert.IsNull(expectRes.WakeOnCriticalMessageSeverity);
         }
 
         [Test]
@@ -119,6 +123,10 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
             Assert.IsTrue(expectRes.Command.SequenceEqual(primaryCmd));
             Assert.AreEqual(1, _sentByFirst.Count);
             AssertNotifyAround(_sentByFirst[0], COMMAND_CLASS_SECURITY_2.SECURITY_2_MESSAGE_ENCAPSULATION.ID);
+            // Flags and severity survive the S2 decryption after the Notify decapsulation.
+            Assert.IsTrue(expectRes.SubstituteIncomingFlags.HasFlag(SubstituteIncomingFlags.Security));
+            Assert.IsTrue(expectRes.SubstituteIncomingFlags.HasFlag(SubstituteIncomingFlags.WakeOnCriticalMessage));
+            Assert.AreEqual(SEVERITY, expectRes.WakeOnCriticalMessageSeverity);
         }
 
         private static void AssertNotifyAround(byte[] frame, byte innerCmdId)

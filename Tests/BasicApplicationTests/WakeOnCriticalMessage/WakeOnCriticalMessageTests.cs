@@ -64,6 +64,25 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
             // Assert.
             Assert.IsTrue(expectRes);
             Assert.IsTrue(expectRes.Command.SequenceEqual(primaryCmd));
+            Assert.IsTrue(expectRes.SubstituteIncomingFlags.HasFlag(SubstituteIncomingFlags.WakeOnCriticalMessage));
+            Assert.AreEqual(SEVERITY, expectRes.WakeOnCriticalMessageSeverity);
+        }
+
+        [Test]
+        public void Incoming_NoNotify_NoFlagAndNoSeverity()
+        {
+            // Arrange.
+            byte[] primaryCmd = CreateDataAsBasicSet();
+            var expectToken = _ctrlSecond.ExpectData(NODE_ID_1, primaryCmd, EXPECT_TIMEOUT, null);
+
+            // Act.
+            _ctrlFirst.SendData(NODE_ID_2, primaryCmd, TXO);
+            var expectRes = (ExpectDataResult)expectToken.WaitCompletedSignal();
+
+            // Assert.
+            Assert.IsTrue(expectRes);
+            Assert.IsFalse(expectRes.SubstituteIncomingFlags.HasFlag(SubstituteIncomingFlags.WakeOnCriticalMessage));
+            Assert.IsNull(expectRes.WakeOnCriticalMessageSeverity);
         }
 
         [Test]
@@ -81,6 +100,8 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
             // Assert.
             Assert.IsTrue(expectRes);
             Assert.IsTrue(expectRes.Command.SequenceEqual(notify));
+            Assert.IsFalse(expectRes.SubstituteIncomingFlags.HasFlag(SubstituteIncomingFlags.WakeOnCriticalMessage));
+            Assert.IsNull(expectRes.WakeOnCriticalMessageSeverity);
         }
 
         [Test]

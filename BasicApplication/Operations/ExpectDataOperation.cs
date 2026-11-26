@@ -42,6 +42,8 @@ namespace ZWave.BasicApplication.Operations
             SpecificResult.Rssi = ReceivedAchData.Rssi;
             SpecificResult.SecurityScheme = (SecuritySchemes)ReceivedAchData.SecurityScheme;
             SpecificResult.Extensions = ReceivedAchData.Extensions;
+            SpecificResult.SubstituteIncomingFlags = ReceivedAchData.SubstituteIncomingFlags;
+            SpecificResult.WakeOnCriticalMessageSeverity = ReceivedAchData.WakeOnCriticalMessageSeverity;
             SpecificResult.SubstituteStatus = (ou.DataFrame.SubstituteIncomingFlags & SubstituteIncomingFlags.Security) > 0 ?
                 SubstituteStatuses.Done : SubstituteStatuses.Failed;
             SetStateCompleted(ou);
@@ -73,5 +75,13 @@ namespace ZWave.BasicApplication.Operations
         public SecuritySchemes SecurityScheme { get; set; }
         public SubstituteStatuses SubstituteStatus { get; set; }
         public Extensions Extensions { get; set; }
+        /// <summary>
+        /// Encapsulations removed from the received command (e.g. Security, Supervision, WakeOnCriticalMessage).
+        /// </summary>
+        public SubstituteIncomingFlags SubstituteIncomingFlags { get; set; }
+        /// <summary>
+        /// Severity of the Wake On Critical Message Notify Command the command was received in, or null.
+        /// </summary>
+        public byte? WakeOnCriticalMessageSeverity { get; set; }
     }
 }

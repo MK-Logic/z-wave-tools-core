@@ -157,6 +157,7 @@ namespace ZWave.BasicApplication
             df.SetBuffer(t, 0, t.Length);
             var currentFlags = packet.SubstituteIncomingFlags;
             df.SubstituteIncomingFlags = (currentFlags | SubstituteIncomingFlags.Security);
+            df.WakeOnCriticalMessageSeverity = packet.WakeOnCriticalMessageSeverity;
             return df;
         }
     }

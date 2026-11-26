@@ -60,12 +60,14 @@ namespace ZWave.BasicApplication
         public byte DstEndPoint { get; set; }
         public int ResponseDelayMs { get; set; }
         public int CallbackWaitTimeoutMs { get; set; }
+        public bool IsWakeOnCriticalMessageEnabled { get; set; }
 
         public void Clear()
         {
             IsAutoIncrementEnabled = false;
             IsBitAdress = false;
             IsCRC16Enabled = false;
+            IsWakeOnCriticalMessageEnabled = false;
             DstEndPoint = 0x00;
             IsForceMultiCastEnabled = false;
             IsSkipWaitingSendCallbackEnabled = false;
