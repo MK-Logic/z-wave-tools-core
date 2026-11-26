@@ -25,16 +25,27 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
             COMMAND_CLASS_SECURITY_2.ID, COMMAND_CLASS_SECURITY_2.SECURITY_2_MESSAGE_ENCAPSULATION.ID, 0x01, 0x00,
             0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB
         };
+        // S2 Message Encapsulation with a SPAN Extension (critical, 16 bytes sender entropy input),
+        // followed by dummy ciphertext and MAC.
+        private static readonly byte[] S2_MESSAGE_ENCAPSULATION_WITH_SPAN =
+        {
+            COMMAND_CLASS_SECURITY_2.ID, COMMAND_CLASS_SECURITY_2.SECURITY_2_MESSAGE_ENCAPSULATION.ID, 0x01, 0x01,
+            0x12, 0x41,
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB
+        };
         private readonly List<byte[]> _sentByFirst = new List<byte[]>();
         private WakeOnCriticalMessageManager _wocmFirst;
+        private WakeOnCriticalMessageManager _wocmSecond;
 
         [SetUp]
         public void SetUp()
         {
             _transport.SetUpModulesNetwork(_ctrlFirst.SessionId, _ctrlSecond.SessionId);
-            _wocmFirst = new WakeOnCriticalMessageManager(_ctrlFirst.Network) { Severity = SEVERITY };
+            _wocmFirst = new WakeOnCriticalMessageManager(_ctrlFirst.Network);
+            _wocmSecond = new WakeOnCriticalMessageManager(_ctrlSecond.Network);
             _ctrlFirst.SessionClient.AddSubstituteManager(_wocmFirst);
-            _ctrlSecond.SessionClient.AddSubstituteManager(new WakeOnCriticalMessageManager(_ctrlSecond.Network));
+            _ctrlSecond.SessionClient.AddSubstituteManager(_wocmSecond);
 
             _sentByFirst.Clear();
             _app.FrameLayer.FrameTransmitted += (sender, e) =>
@@ -105,14 +116,33 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
         }
 
         [Test]
-        public void Outgoing_UseWakeOnCriticalMessage_NotifySentAndDecapsulatedByReceiver()
+        public void Incoming_Suspended_ReceiverGetsNotifyUnchanged()
+        {
+            // Arrange.
+            _wocmSecond.Suspend();
+            byte[] notify = Notify(SEVERITY, CreateDataAsBasicSet());
+            var expectToken = _ctrlSecond.ExpectData(NODE_ID_1, notify, EXPECT_TIMEOUT, null);
+
+            // Act.
+            _ctrlFirst.SendData(NODE_ID_2, notify, TXO);
+            var expectRes = (ExpectDataResult)expectToken.WaitCompletedSignal();
+
+            // Assert.
+            Assert.IsTrue(expectRes);
+            Assert.IsTrue(expectRes.Command.SequenceEqual(notify));
+            Assert.IsFalse(expectRes.SubstituteIncomingFlags.HasFlag(SubstituteIncomingFlags.WakeOnCriticalMessage));
+            Assert.IsNull(expectRes.WakeOnCriticalMessageSeverity);
+        }
+
+        [Test]
+        public void Outgoing_Severity_NotifySentAndDecapsulatedByReceiver()
         {
             // Arrange.
             byte[] primaryCmd = CreateDataAsBasicSet();
             var expectToken = _ctrlSecond.ExpectData(NODE_ID_1, primaryCmd, EXPECT_TIMEOUT, null);
 
             // Act.
-            _ctrlFirst.SendData(NODE_ID_2, primaryCmd, TXO, new SubstituteSettings(SubstituteFlags.UseWakeOnCriticalMessage, 0));
+            _ctrlFirst.SendData(NODE_ID_2, primaryCmd, TXO, Settings(SEVERITY));
             var expectRes = (ExpectDataResult)expectToken.WaitCompletedSignal();
 
             // Assert.
@@ -123,7 +153,72 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
         }
 
         [Test]
-        public void SubstituteActionInternal_NoFlag_LeavesActionUnchanged()
+        public void SubstituteActionInternal_SeverityZero_WrapsDataForNegativeTesting()
+        {
+            // Arrange.
+            var network = new NetworkViewPoint();
+            byte[] primaryCmd = CreateDataAsBasicSet();
+            var action = new SendDataOperation(network, NODE_ID_2, primaryCmd, TXO) { SubstituteSettings = Settings(0) };
+
+            // Act.
+            var result = new WakeOnCriticalMessageManager(network).SubstituteActionInternal(action);
+
+            // Assert.
+            Assert.AreSame(action, result);
+            Assert.IsTrue(action.Data.SequenceEqual(Notify(0, primaryCmd)));
+        }
+
+        [Test]
+        public void SubstituteActionInternal_Suspended_LeavesActionUnchanged()
+        {
+            // Arrange.
+            var network = new NetworkViewPoint();
+            byte[] primaryCmd = CreateDataAsBasicSet();
+            var action = new SendDataOperation(network, NODE_ID_2, primaryCmd, TXO) { SubstituteSettings = Settings(SEVERITY) };
+            var manager = new WakeOnCriticalMessageManager(network);
+            manager.Suspend();
+
+            // Act.
+            var result = manager.SubstituteActionInternal(action);
+
+            // Assert.
+            Assert.IsNull(result);
+            Assert.IsTrue(action.Data.SequenceEqual(primaryCmd));
+        }
+
+        [Test]
+        public void SubstituteActionInternal_S2WithoutSpanExtension_WrapsData()
+        {
+            // Arrange.
+            var network = new NetworkViewPoint();
+            var action = new SendDataOperation(network, NODE_ID_2, S2_MESSAGE_ENCAPSULATION, TXO) { SubstituteSettings = Settings(SEVERITY) };
+
+            // Act.
+            var result = new WakeOnCriticalMessageManager(network).SubstituteActionInternal(action);
+
+            // Assert.
+            Assert.AreSame(action, result);
+            Assert.IsTrue(action.Data.SequenceEqual(Notify(SEVERITY, S2_MESSAGE_ENCAPSULATION)));
+        }
+
+        [Test]
+        public void SubstituteActionInternal_S2WithSpanExtension_LeavesActionUnchanged()
+        {
+            // Arrange: an S2 Message Encapsulation in a Notify Command MUST NOT carry a SPAN Extension
+            // (CC:008D.01.04.11.013).
+            var network = new NetworkViewPoint();
+            var action = new SendDataOperation(network, NODE_ID_2, S2_MESSAGE_ENCAPSULATION_WITH_SPAN, TXO) { SubstituteSettings = Settings(SEVERITY) };
+
+            // Act.
+            var result = new WakeOnCriticalMessageManager(network).SubstituteActionInternal(action);
+
+            // Assert.
+            Assert.IsNull(result);
+            Assert.IsTrue(action.Data.SequenceEqual(S2_MESSAGE_ENCAPSULATION_WITH_SPAN));
+        }
+
+        [Test]
+        public void SubstituteActionInternal_NoSeverity_LeavesActionUnchanged()
         {
             // Arrange.
             var network = new NetworkViewPoint();
@@ -144,11 +239,10 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
             // Arrange.
             var network = new NetworkViewPoint { Library = Libraries.EndDeviceLib };
             byte[] primaryCmd = CreateDataAsBasicSet();
-            var action = new SendDataExOperation(network, NODE_ID_2, primaryCmd, TXO, SecuritySchemes.NONE);
-            action.SubstituteSettings.SetFlag(SubstituteFlags.UseWakeOnCriticalMessage);
+            var action = new SendDataExOperation(network, NODE_ID_2, primaryCmd, TXO, SecuritySchemes.NONE) { SubstituteSettings = Settings(SEVERITY) };
 
             // Act.
-            var result = new WakeOnCriticalMessageManager(network) { Severity = SEVERITY }.SubstituteActionInternal(action);
+            var result = new WakeOnCriticalMessageManager(network).SubstituteActionInternal(action);
 
             // Assert.
             Assert.AreSame(action, result);
@@ -161,8 +255,7 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
             // Arrange: the End Device firmware encrypts the frame, so the Notify Command would end up inside S2.
             var network = new NetworkViewPoint { Library = Libraries.EndDeviceLib };
             byte[] primaryCmd = CreateDataAsBasicSet();
-            var action = new SendDataExOperation(network, NODE_ID_2, primaryCmd, TXO, SecuritySchemes.S2_ACCESS);
-            action.SubstituteSettings.SetFlag(SubstituteFlags.UseWakeOnCriticalMessage);
+            var action = new SendDataExOperation(network, NODE_ID_2, primaryCmd, TXO, SecuritySchemes.S2_ACCESS) { SubstituteSettings = Settings(SEVERITY) };
 
             // Act.
             var result = new WakeOnCriticalMessageManager(network).SubstituteActionInternal(action);
@@ -190,7 +283,7 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
 
             // Act.
             var result = _ctrlFirst.SendDataEx(NODE_ID_2, CreateDataAsBasicSet(), TXO,
-                new SubstituteSettings(SubstituteFlags.UseWakeOnCriticalMessage, 0),
+                Settings(SEVERITY),
                 TransmitSecurityOptions.S2_TXOPTION_VERIFY_DELIVERY, SecuritySchemes.S2_ACCESS, TransmitOptions2.NONE);
 
             // Assert.
@@ -252,8 +345,7 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
         {
             // Arrange: the SecurityManager answers an S2 MOS extension with an MPAN-only action.
             var network = new NetworkViewPoint();
-            var action = new SendDataOperation(network, NODE_ID_2, null, TXO);
-            action.SubstituteSettings.SetFlag(SubstituteFlags.UseWakeOnCriticalMessage);
+            var action = new SendDataOperation(network, NODE_ID_2, null, TXO) { SubstituteSettings = Settings(SEVERITY) };
 
             // Act.
             var result = new WakeOnCriticalMessageManager(network).SubstituteActionInternal(action);
@@ -261,6 +353,11 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
             // Assert.
             Assert.IsNull(result);
             Assert.IsNull(action.Data);
+        }
+
+        internal static SubstituteSettings Settings(byte severity)
+        {
+            return new SubstituteSettings { WakeOnCriticalMessageSeverity = severity };
         }
 
         internal static byte[] Notify(byte severity, byte[] payload)

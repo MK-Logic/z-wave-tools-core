@@ -154,7 +154,10 @@ namespace ZWave.BasicApplication.Operations
                             {
                                 CallbackApiOperation operation = null;
                                 operation = new SendDataExOperation(_network, ReceivedAchData.DstNode, ReceivedAchData.SrcNode, command, TxOptions, TxSecOptions, scheme, TxOptions2);
-                                operation.SubstituteSettings = new SubstituteSettings(SubstituteSettings.SubstituteFlags, SubstituteSettings.S0MaxBytesPerFrameSize);
+                                operation.SubstituteSettings = new SubstituteSettings(SubstituteSettings.SubstituteFlags, SubstituteSettings.S0MaxBytesPerFrameSize)
+                                {
+                                    WakeOnCriticalMessageSeverity = SubstituteSettings.WakeOnCriticalMessageSeverity
+                                };
                                 if (ReceivedAchData.SubstituteIncomingFlags.HasFlag(SubstituteIncomingFlags.Crc16Encap))
                                 {
                                     operation.SubstituteSettings.SetFlag(SubstituteFlags.UseCrc16Encap);

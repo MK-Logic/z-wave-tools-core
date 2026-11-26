@@ -8,28 +8,49 @@ using ZWave.CommandClasses;
 using ZWave.Devices;
 using ZWave.Enums;
 using ZWave.Layers.Frame;
+using ZWave.Security;
 
 namespace ZWave.BasicApplication
 {
     /// <summary>
-    /// Handles the Wake On Critical Message Notify Command, which is always the outermost encapsulation layer
-    /// (outside of S2).
-    /// Incoming: removes the Notify encapsulation before any other layer (e.g. S2) is processed.
-    /// Outgoing: wraps frames sent with <see cref="SubstituteFlags.UseWakeOnCriticalMessage"/> after all other layers.
-    /// Limitation: with the End Device Serial API and the Sample Application, security is handled by the firmware.
-    /// Therefore only non-secure frames are supported:
-    /// - Outgoing: an action sent with a security scheme fails without sending anything.
-    /// - Incoming: a Notify Command that contains an S0 or S2 encapsulation is not decapsulated.
+    /// Handles the Wake On Critical Message Notify Command (CC:008D), which is always the outermost encapsulation
+    /// layer, outside of S2 (CC:008D.01.00.21.005).
+    ///
+    /// Incoming:
+    /// - The Notify encapsulation is removed before any other layer, so an encapsulated S2 frame is decrypted by
+    ///   the SecurityManager afterwards.
+    /// - The received frame carries <see cref="SubstituteIncomingFlags.WakeOnCriticalMessage"/> and its severity
+    ///   (CustomDataFrame.WakeOnCriticalMessageSeverity), which are passed on to AchData and ExpectDataResult.
+    /// - Only a Notify Command whose Payload Length matches the received data is decapsulated. Other spec rules
+    ///   (severity, payload length limit, allowed payloads) are left to the test cases, which can still inspect
+    ///   the original frame.
+    ///
+    /// Outgoing:
+    /// - A frame is wrapped after all other layers if SubstituteSettings.WakeOnCriticalMessageSeverity is set.
+    ///   The manager has no state of its own: the severity is given per action, e.g. clamped per destination.
+    /// - S2 nonce synchronization (combination E, CC:008D.01.04.11.014): if the sender has no SPAN, only the
+    ///   S2 Nonce Get is sent in a Notify Command (see SendDataSecureS2Task); the following S2 Message
+    ///   Encapsulation with the SPAN Extension is sent without it.
+    /// - An S2 Message Encapsulation that carries a SPAN Extension is never wrapped (CC:008D.01.04.11.013), but
+    ///   sent without a Notify Command. Besides combination E, this happens if the receiver answers with an
+    ///   S2 Nonce Report (SOS) and the SecurityManager retransmits the frame with the original substitute
+    ///   settings, e.g. because the receiver lost its SPAN while it was partially disabled.
+    /// - Frames that already are a Notify Command and actions without command data (e.g. the MPAN-only answer to
+    ///   an S2 MOS extension) are not wrapped.
+    ///
+    /// Limitation: with the End Device Serial API and the Sample Application, security is handled by the firmware,
+    /// so only non-secure frames are supported:
+    /// - Outgoing: an action sent with a security scheme fails without sending anything, because the firmware
+    ///   would encrypt the Notify Command and put it inside S2.
+    /// - Incoming: a Notify Command that contains an S0 or S2 encapsulation is not decapsulated, because the
+    ///   firmware hasn't seen the security encapsulation and the host can't process it.
+    ///
+    /// <see cref="SubstituteManagerBase.Suspend"/> disables both directions: received Notify Commands reach the
+    /// application unchanged, and the severity of outgoing actions is ignored.
     /// </summary>
     public class WakeOnCriticalMessageManager : SubstituteManagerBase
     {
         private const int NOTIFY_HEADER_LENGTH = 4; // Command Class, Command, Properties1 (Severity), Payload Length
-
-        /// <summary>
-        /// Severity (1..7) written to outgoing Notify Commands. Values outside the range are sent as given
-        /// (masked to 3 bits) to allow negative testing.
-        /// </summary>
-        public byte Severity { get; set; } = 1;
 
         public WakeOnCriticalMessageManager(NetworkViewPoint network)
             : base(network)
@@ -65,8 +86,6 @@ namespace ZWave.BasicApplication
 
         /// <summary>
         /// Only a Notify Command whose Payload Length matches the received data is decapsulated.
-        /// Other spec rules (severity, payload length limit, allowed payloads) are left to the test cases,
-        /// which can still inspect the original frame.
         /// </summary>
         private static bool TryGetNotify(byte[] cmdData,
             out COMMAND_CLASS_WAKE_ON_CRITICAL_MESSAGE.WAKE_ON_CRITICAL_MESSAGE_NOTIFY notify)
@@ -88,11 +107,12 @@ namespace ZWave.BasicApplication
         public override ActionBase SubstituteActionInternal(ApiOperation action)
         {
             ActionBase ret = null;
-            if (IsActive && action.SubstituteSettings.HasFlag(SubstituteFlags.UseWakeOnCriticalMessage))
+            if (IsActive && action.SubstituteSettings.WakeOnCriticalMessageSeverity is byte severity)
             {
                 byte[] data = GetData(action);
                 // Data is null for S2 messages that only carry extensions (e.g. the MPAN answer to MOS).
-                if (data != null && data.Length > 1 && data[0] != COMMAND_CLASS_WAKE_ON_CRITICAL_MESSAGE.ID)
+                if (data != null && data.Length > 1 && data[0] != COMMAND_CLASS_WAKE_ON_CRITICAL_MESSAGE.ID &&
+                    !HasSpanExtension(data))
                 {
                     if (IsEncryptedByFirmware(action))
                     {
@@ -102,7 +122,7 @@ namespace ZWave.BasicApplication
                             "because the firmware encrypts the frame and the Notify Command would end up inside S2");
                     }
                     var notify = new COMMAND_CLASS_WAKE_ON_CRITICAL_MESSAGE.WAKE_ON_CRITICAL_MESSAGE_NOTIFY();
-                    notify.properties1.severity = Severity;
+                    notify.properties1.severity = severity;
                     notify.payloadLength = (byte)data.Length;
                     notify.encapsulatedPayload = data.ToList();
                     if (SetData(action, notify))
@@ -131,6 +151,23 @@ namespace ZWave.BasicApplication
             return IsSecurityHandledByFirmware() &&
                 action is SendDataExOperation sendDataEx &&
                 sendDataEx.SecurityScheme != SecuritySchemes.NONE;
+        }
+
+        /// <summary>
+        /// An S2 Message Encapsulation in a Notify Command MUST NOT carry a SPAN Extension
+        /// (CC:008D.01.04.11.013), so such a frame is sent without the Notify Command.
+        /// </summary>
+        private static bool HasSpanExtension(byte[] data)
+        {
+            if (data.Length < 4 ||
+                data[0] != COMMAND_CLASS_SECURITY_2.ID ||
+                data[1] != COMMAND_CLASS_SECURITY_2.SECURITY_2_MESSAGE_ENCAPSULATION.ID)
+            {
+                return false;
+            }
+            COMMAND_CLASS_SECURITY_2.SECURITY_2_MESSAGE_ENCAPSULATION cmd = data;
+            return cmd.properties1.extension == 1 && cmd.vg1 != null &&
+                cmd.vg1.Any(x => x.properties1.type == (byte)ExtensionTypes.Span);
         }
 
         private static bool IsSecurityEncapsulation(IList<byte> payload)

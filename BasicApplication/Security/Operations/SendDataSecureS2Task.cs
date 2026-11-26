@@ -123,11 +123,12 @@ namespace ZWave.BasicApplication.Operations
             }
 
             // Wake On Critical Message: if nonce synchronization is required, only the S2 Nonce Get is sent
-            // in a Notify Command; the following S2 Message Encapsulation is sent without it.
-            if (SubstituteSettingsForRetransmission != null &&
-                SubstituteSettingsForRetransmission.HasFlag(SubstituteFlags.UseWakeOnCriticalMessage))
+            // in a Notify Command (CC:008D.01.04.11.014). The following S2 Message Encapsulation carries the
+            // SPAN Extension and is sent without it (_sendEncData has its own substitute settings).
+            if (SubstituteSettingsForRetransmission != null)
             {
-                _requestNonce.SubstituteSettings.SetFlag(SubstituteFlags.UseWakeOnCriticalMessage);
+                _requestNonce.SubstituteSettings.WakeOnCriticalMessageSeverity =
+                    SubstituteSettingsForRetransmission.WakeOnCriticalMessageSeverity;
             }
 
             #region NonceGet

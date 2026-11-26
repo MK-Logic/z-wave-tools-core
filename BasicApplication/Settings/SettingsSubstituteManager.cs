@@ -60,14 +60,18 @@ namespace ZWave.BasicApplication
         public byte DstEndPoint { get; set; }
         public int ResponseDelayMs { get; set; }
         public int CallbackWaitTimeoutMs { get; set; }
-        public bool IsWakeOnCriticalMessageEnabled { get; set; }
+        /// <summary>
+        /// Severity of the Wake On Critical Message Notify Command all frames of the device are wrapped in,
+        /// or null to send them without it (see SubstituteSettings.WakeOnCriticalMessageSeverity).
+        /// </summary>
+        public byte? WakeOnCriticalMessageSeverity { get; set; }
 
         public void Clear()
         {
             IsAutoIncrementEnabled = false;
             IsBitAdress = false;
             IsCRC16Enabled = false;
-            IsWakeOnCriticalMessageEnabled = false;
+            WakeOnCriticalMessageSeverity = null;
             DstEndPoint = 0x00;
             IsForceMultiCastEnabled = false;
             IsSkipWaitingSendCallbackEnabled = false;

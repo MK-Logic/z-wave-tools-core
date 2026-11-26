@@ -280,6 +280,14 @@ namespace ZWave
         public bool IsBitAdress { get; set; }
         public byte SrcEndPoint { get; set; }
         public byte DstEndPoint { get; set; }
+        /// <summary>
+        /// Severity of the Wake On Critical Message Notify Command the frame is wrapped in (outermost layer),
+        /// or null to send the frame without a Notify Command.
+        /// 0 and values above 7 are sent as given (masked to 3 bits) to allow negative testing.
+        /// See WakeOnCriticalMessageManager for the cases in which the frame is sent without a Notify Command
+        /// or the action fails.
+        /// </summary>
+        public byte? WakeOnCriticalMessageSeverity { get; set; }
         public SubstituteSettings() { }
 
         public SubstituteSettings(SubstituteFlags substituteFlags, int s0MaxBytesPerFrameSize)

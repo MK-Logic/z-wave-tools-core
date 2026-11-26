@@ -24,6 +24,7 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
     {
         private const byte SEVERITY = 3;
         private readonly List<byte[]> _sentByFirst = new List<byte[]>();
+        private SecurityManager _smSecond;
 
         private static readonly byte[] TEST_SECRET_KEY = new byte[]
         {
@@ -39,8 +40,8 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
             _ctrlSecond.MemoryGetId();
 
             SetUpS2(_ctrlFirst, NODE_ID_2);
-            SetUpS2(_ctrlSecond, NODE_ID_1);
-            _ctrlFirst.SessionClient.AddSubstituteManager(new WakeOnCriticalMessageManager(_ctrlFirst.Network) { Severity = SEVERITY });
+            _smSecond = SetUpS2(_ctrlSecond, NODE_ID_1);
+            _ctrlFirst.SessionClient.AddSubstituteManager(new WakeOnCriticalMessageManager(_ctrlFirst.Network));
             _ctrlSecond.SessionClient.AddSubstituteManager(new WakeOnCriticalMessageManager(_ctrlSecond.Network));
 
             _sentByFirst.Clear();
@@ -57,7 +58,7 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
             };
         }
 
-        private void SetUpS2(ZWave.BasicApplication.Devices.Controller ctrl, NodeTag peer)
+        private SecurityManager SetUpS2(ZWave.BasicApplication.Devices.Controller ctrl, NodeTag peer)
         {
             var sm = new SecurityManager(ctrl.Network,
                 new[]
@@ -69,13 +70,25 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
             ctrl.Network.IsEnabledS2_ACCESS = true;
             ctrl.Network.SetSecuritySchemes(peer, SecuritySchemeSet.ALLS2);
             ctrl.SessionClient.ExecuteAsync(sm.CreateSecurityS2ReportTask());
+            return sm;
         }
 
         private ExpectDataResult SendCritical(byte[] primaryCmd)
         {
             var expectToken = _ctrlSecond.ExpectData(NODE_ID_1, primaryCmd, EXPECT_TIMEOUT, null);
-            _ctrlFirst.SendData(NODE_ID_2, primaryCmd, TXO, new SubstituteSettings(SubstituteFlags.UseWakeOnCriticalMessage, 0));
+            _ctrlFirst.SendData(NODE_ID_2, primaryCmd, TXO, new SubstituteSettings { WakeOnCriticalMessageSeverity = SEVERITY });
             return (ExpectDataResult)expectToken.WaitCompletedSignal();
+        }
+
+        private void SynchronizeSpan(byte[] primaryCmd)
+        {
+            var syncToken = _ctrlSecond.ExpectData(NODE_ID_1, primaryCmd, EXPECT_TIMEOUT, null);
+            _ctrlFirst.SendData(NODE_ID_2, primaryCmd, TXO);
+            Assert.IsTrue((ExpectDataResult)syncToken.WaitCompletedSignal());
+            lock (_sentByFirst)
+            {
+                _sentByFirst.Clear();
+            }
         }
 
         [Test]
@@ -110,10 +123,7 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
         {
             // Arrange: synchronize the SPAN with a regular S2 frame.
             byte[] primaryCmd = CreateDataAsBasicSet();
-            var syncToken = _ctrlSecond.ExpectData(NODE_ID_1, primaryCmd, EXPECT_TIMEOUT, null);
-            _ctrlFirst.SendData(NODE_ID_2, primaryCmd, TXO);
-            Assert.IsTrue((ExpectDataResult)syncToken.WaitCompletedSignal());
-            _sentByFirst.Clear();
+            SynchronizeSpan(primaryCmd);
 
             // Act.
             var expectRes = SendCritical(primaryCmd);
@@ -127,6 +137,31 @@ namespace BasicApplicationTests.WakeOnCriticalMessage
             Assert.IsTrue(expectRes.SubstituteIncomingFlags.HasFlag(SubstituteIncomingFlags.Security));
             Assert.IsTrue(expectRes.SubstituteIncomingFlags.HasFlag(SubstituteIncomingFlags.WakeOnCriticalMessage));
             Assert.AreEqual(SEVERITY, expectRes.WakeOnCriticalMessageSeverity);
+        }
+
+        [Test]
+        public void SendData_ReceiverLostSpan_RetransmissionWithSpanExtensionSentWithoutNotify()
+        {
+            // Arrange: the SPAN is synchronized, then the receiver loses it (e.g. while partially disabled).
+            byte[] primaryCmd = CreateDataAsBasicSet();
+            SynchronizeSpan(primaryCmd);
+            _smSecond.SecurityManagerInfo.SpanTable.SetNonceFree(new InvariantPeerNodeId(_ctrlSecond.Network.NodeTag, NODE_ID_1));
+
+            // Act: the receiver can't decrypt the frame and answers with an S2 Nonce Report (SOS),
+            // so the sender retransmits the frame with a SPAN Extension.
+            var expectRes = SendCritical(primaryCmd);
+
+            // Assert.
+            Assert.IsTrue(expectRes);
+            Assert.IsTrue(expectRes.Command.SequenceEqual(primaryCmd));
+            Assert.AreEqual(2, _sentByFirst.Count);
+            AssertNotifyAround(_sentByFirst[0], COMMAND_CLASS_SECURITY_2.SECURITY_2_MESSAGE_ENCAPSULATION.ID);
+            // An S2 Message Encapsulation in a Notify Command MUST NOT carry a SPAN Extension (CC:008D.01.04.11.013).
+            Assert.AreEqual(COMMAND_CLASS_SECURITY_2.ID, _sentByFirst[1][0]);
+            Assert.AreEqual(COMMAND_CLASS_SECURITY_2.SECURITY_2_MESSAGE_ENCAPSULATION.ID, _sentByFirst[1][1]);
+            Assert.AreEqual(0x01, _sentByFirst[1][3] & 0x01, "SPAN Extension expected in the retransmission");
+            Assert.IsFalse(expectRes.SubstituteIncomingFlags.HasFlag(SubstituteIncomingFlags.WakeOnCriticalMessage));
+            Assert.IsNull(expectRes.WakeOnCriticalMessageSeverity);
         }
 
         private static void AssertNotifyAround(byte[] frame, byte innerCmdId)
