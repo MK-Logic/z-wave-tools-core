@@ -37,6 +37,9 @@ namespace ZWave.BasicApplication
     ///   settings, e.g. because the receiver lost its SPAN while it was partially disabled.
     /// - Frames that already are a Notify Command and actions without command data (e.g. the MPAN-only answer to
     ///   an S2 MOS extension) are not wrapped.
+    /// - No spec rule is enforced for outgoing frames, so that test cases can send invalid ones: an S0 frame is
+    ///   wrapped as well (CC:008D.01.00.21.006), and neither the severity range nor the payload length
+    ///   (CC:008D.01.00.21.004) is checked. WakeOnCriticalMessageSupport (ZATS) follows these rules.
     ///
     /// Limitation: with the End Device Serial API and the Sample Application, security is handled by the firmware,
     /// so only non-secure frames are supported:
